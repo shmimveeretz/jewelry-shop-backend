@@ -45,17 +45,28 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   "http://localhost:5173",
   "http://localhost:3000",
+  "https://shamayim-vaaretz.netlify.app",
+  "https://www.shamayim-vaaretz.netlify.app",
 ].filter(Boolean); // Remove undefined values
+
+console.log("📝 CORS Allowed Origins:", allowedOrigins);
 
 app.use(
   cors({
     origin: function (origin, callback) {
+      console.log("🔍 Request origin:", origin);
+      
       // Allow requests with no origin (mobile apps, curl, etc.)
-      if (!origin) return callback(null, true);
+      if (!origin) {
+        console.log("✅ No origin (mobile/curl)");
+        return callback(null, true);
+      }
 
       if (allowedOrigins.indexOf(origin) !== -1) {
+        console.log("✅ Origin allowed:", origin);
         callback(null, true);
       } else {
+        console.log("❌ Origin NOT allowed:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
