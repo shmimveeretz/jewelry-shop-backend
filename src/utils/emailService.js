@@ -1,33 +1,15 @@
-import nodemailer from "nodemailer";
+import sgMail from "@sendgrid/mail";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-// Create transporter for Gmail SMTP
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_APP_PASSWORD,
-  },
-  tls: {
-    rejectUnauthorized: false,
-  },
-});
+// Set SendGrid API key
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-// Verify SMTP connection
-transporter.verify((error, success) => {
-  if (error) {
-    console.log("❌ SMTP Connection Error:", error);
-  } else {
-    console.log("✅ SMTP Server is ready to send emails");
-  }
-});
+console.log("✅ SendGrid Email Service Initialized");
 
 /**
- * Send email using Gmail SMTP
+ * Send email using SendGrid
  * @param {Object} mailOptions - Email options
  * @param {string} mailOptions.to - Recipient email
  * @param {string} mailOptions.subject - Email subject
@@ -37,20 +19,28 @@ transporter.verify((error, success) => {
  */
 export const sendEmail = async (mailOptions) => {
   try {
-    const defaultOptions = {
-      from: `Shamayim VaAretz <${process.env.EMAIL_USER}>`,
-      ...mailOptions,
+    const msg = {
+      to: mailOptions.to,
+      from: process.env.EMAIL_USER || "noreply@shamayim-vaaretz.com",
+      subject: mailOptions.subject,
+      text: mailOptions.text,
+      html: mailOptions.html || mailOptions.text,
     };
 
-    const info = await transporter.sendMail(defaultOptions);
-    console.log("✅ Email sent:", info.messageId);
+    const result = await sgMail.send(msg);
+    console.log("✅ Email sent successfully:", mailOptions.to);
     return {
       success: true,
-      messageId: info.messageId,
+      message: "Email sent successfully",
+      data: result,
     };
   } catch (error) {
-    console.error("❌ Email send error:", error);
-    throw new Error("שגיאה בשליחת אימייל");
+    console.error("❌ SendGrid Email Error:", error.message);
+    return {
+      success: false,
+      message: error.message,
+      error,
+    };
   }
 };
 
