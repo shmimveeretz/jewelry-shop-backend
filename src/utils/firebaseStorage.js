@@ -1,7 +1,20 @@
 import admin from "firebase-admin";
 import path from "path";
 
-const bucket = admin.storage().bucket();
+let bucket = null;
+
+// Lazy load bucket when needed
+const getBucket = () => {
+  if (!bucket) {
+    if (!admin.apps.length) {
+      throw new Error(
+        "Firebase not initialized. Call initializeFirebase() first.",
+      );
+    }
+    bucket = admin.storage().bucket();
+  }
+  return bucket;
+};
 
 // Upload file to Firebase Storage
 export const uploadFile = async (file, folder = "products") => {
@@ -9,6 +22,8 @@ export const uploadFile = async (file, folder = "products") => {
     if (!file) {
       throw new Error("No file provided");
     }
+
+    const bucket = getBucket();
 
     // Create unique filename
     const timestamp = Date.now();
@@ -47,6 +62,7 @@ export const uploadFile = async (file, folder = "products") => {
 // Delete file from Firebase
 export const deleteFile = async (filename) => {
   try {
+    const bucket = getBucket();
     const blob = bucket.file(filename);
     await blob.delete();
 
@@ -61,6 +77,7 @@ export const deleteFile = async (filename) => {
 // Get signed URL (for private files, expires in 7 days)
 export const getSignedUrl = async (filename) => {
   try {
+    const bucket = getBucket();
     const [signedUrl] = await bucket.file(filename).getSignedUrl({
       version: "v4",
       action: "read",

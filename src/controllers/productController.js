@@ -1,12 +1,19 @@
 import Product from "../models/Product.js";
-import { uploadImage, deleteImage } from "../utils/cloudinaryUpload.js";
+import { uploadFile, deleteFile } from "../utils/firebaseStorage.js";
 
 // @desc    Get all products with filters and pagination
 // @route   GET /api/products
 // @access  Public
 export const getProducts = async (req, res) => {
   try {
-    const { category, minPrice, maxPrice, limit = 100, page = 1, search } = req.query;
+    const {
+      category,
+      minPrice,
+      maxPrice,
+      limit = 100,
+      page = 1,
+      search,
+    } = req.query;
     const skip = (page - 1) * limit;
 
     console.log("📋 Get Products Request:");
@@ -121,7 +128,7 @@ export const createProduct = async (req, res) => {
     // Upload image to Cloudinary if provided
     if (req.file) {
       try {
-        const upload = await uploadImage(req.file.buffer, "products");
+        const upload = await uploadFile(req.file, "products");
         imageUrl = upload.url;
         console.log("📸 Image uploaded:", imageUrl);
       } catch (uploadError) {
@@ -210,11 +217,11 @@ export const updateProduct = async (req, res) => {
         // Delete old image from Cloudinary if exists
         if (existingProduct.images && existingProduct.images.length > 0) {
           const publicId = extractPublicId(existingProduct.images[0].url);
-          if (publicId) await deleteImage(publicId);
+          if (publicId) await deleteFile(publicId);
         }
 
         // Upload new image
-        const upload = await uploadImage(req.file.buffer, "products");
+        const upload = await uploadFile(req.file, "products");
         images = [{ url: upload.url, alt: name || existingProduct.name }];
         console.log("📸 Image updated:", images[0].url);
       } catch (uploadError) {
@@ -281,9 +288,9 @@ export const deleteProduct = async (req, res) => {
     if (product.images && product.images.length > 0) {
       try {
         const publicId = extractPublicId(product.images[0].url);
-        if (publicId) await deleteImage(publicId);
+        if (publicId) await deleteFile(publicId);
       } catch (error) {
-        console.warn("⚠️ Could not delete image from Cloudinary:", error);
+        console.warn("⚠️ Could not delete image from Firebase:", error);
       }
     }
 
