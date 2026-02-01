@@ -45,8 +45,8 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   "http://localhost:5173",
   "http://localhost:3000",
-  "https://shamayim-vaaretz.netlify.app",
-  "https://www.shamayim-vaaretz.netlify.app",
+  "https://shmimveeretz.netlify.app",
+  "https://www.shmimveeretz.netlify.app",
 ].filter(Boolean); // Remove undefined values
 
 console.log("📝 CORS Allowed Origins:", allowedOrigins);
@@ -55,7 +55,7 @@ app.use(
   cors({
     origin: function (origin, callback) {
       console.log("🔍 Request origin:", origin);
-      
+
       // Allow requests with no origin (mobile apps, curl, etc.)
       if (!origin) {
         console.log("✅ No origin (mobile/curl)");
