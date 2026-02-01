@@ -1,7 +1,5 @@
 import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
-import { readFileSync } from "fs";
-import { resolve } from "path";
 
 let db = null;
 
@@ -14,20 +12,8 @@ const initializeFirebase = () => {
       return db;
     }
 
-    // Initialize with service account file
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
-      const serviceAccountPath = resolve(
-        process.env.FIREBASE_SERVICE_ACCOUNT_PATH,
-      );
-      const serviceAccount = JSON.parse(
-        readFileSync(serviceAccountPath, "utf8"),
-      );
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-    }
-    // Initialize with environment variables
-    else if (
+    // Initialize with environment variables (priority for Render)
+    if (
       process.env.FIREBASE_PROJECT_ID &&
       process.env.FIREBASE_PRIVATE_KEY &&
       process.env.FIREBASE_CLIENT_EMAIL
