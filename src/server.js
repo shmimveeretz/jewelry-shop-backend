@@ -47,6 +47,8 @@ const allowedOrigins = [
   "http://localhost:3000",
   "https://shmimveeretz.netlify.app",
   "https://www.shmimveeretz.netlify.app",
+  "https://shmimveeretz.com",
+  "https://www.shmimveeretz.com",
 ].filter(Boolean); // Remove undefined values
 
 console.log("📝 CORS Allowed Origins:", allowedOrigins);
