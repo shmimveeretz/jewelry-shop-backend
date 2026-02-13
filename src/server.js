@@ -3,9 +3,11 @@ import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import fs from "fs";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 import connectDB from "./config/database.js";
 import { initializeFirebase } from "./config/firebase.js";
+import Product from "./models/Product.js";
 
 // Import routes
 import authRoutes from "./routes/authRoutes.js";
@@ -25,6 +27,72 @@ connectDB();
 
 // Initialize Firebase
 initializeFirebase();
+
+// Auto-import products from jewelry.json on startup
+const autoImportProducts = async () => {
+  try {
+    console.log("🔍 Checking if products need to be imported...");
+    
+    // Check if products already exist
+    const productCount = await Product.Model.countDocuments();
+    
+    if (productCount > 0) {
+      console.log(`✅ Products already imported (${productCount} products found)`);
+      return;
+    }
+    
+    console.log("📥 No products found, importing from jewelry.json...");
+    
+    const jewelryPath = "./data/jewelry.json";
+    if (!fs.existsSync(jewelryPath)) {
+      console.warn("⚠️  jewelry.json not found, skipping auto-import");
+      return;
+    }
+    
+    const jewelryData = JSON.parse(fs.readFileSync(jewelryPath, "utf8"));
+    let imported = 0;
+    
+    for (const item of jewelryData) {
+      try {
+        const images = (item.images || []).map((url) => ({
+          url,
+          alt: item.name,
+        }));
+        
+        await Product.create({
+          name: item.name,
+          nameEn: item.nameEn,
+          description: item.description,
+          descriptionEn: item.descriptionEn,
+          category: item.category,
+          price: item.price,
+          images,
+          metals: item.metals || [],
+          letter: item.letter,
+          meaningHe: item.meaningHe,
+          meaningEn: item.meaningEn,
+          gematria: item.gematria,
+          types: item.types || [],
+          stock: 10,
+          zodiacSign: item.zodiacSign || "כללי",
+          featured: false,
+          rating: { average: 0, count: 0 },
+          reviews: [],
+        });
+        imported++;
+      } catch (error) {
+        console.error(`⚠️  Failed to import ${item.name}: ${error.message}`);
+      }
+    }
+    
+    console.log(`✅ Auto-import complete! Imported ${imported} products`);
+  } catch (error) {
+    console.error("⚠️  Auto-import error:", error.message);
+  }
+};
+
+// Run auto-import after short delay to ensure DB is ready
+setTimeout(autoImportProducts, 2000);
 
 const app = express();
 
