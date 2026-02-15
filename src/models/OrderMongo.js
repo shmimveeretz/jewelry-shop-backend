@@ -1,60 +1,45 @@
 import mongoose from "mongoose";
 
-const orderSchema = new mongoose.Schema(
+const OrderSchema = new mongoose.Schema(
   {
     orderId: {
       type: String,
+      required: true,
       unique: true,
-      required: [true, "מספר הזמנה נדרש"],
-      description: "מספר הזמנה ייחודי (ORD-001, ORD-002, וכו')",
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: [true, "ID של המשתמש נדרש"],
-      description: "ID של המשתמש שהזמין",
     },
-    customerName: {
-      type: String,
-      required: [true, "שם הלקוח נדרש"],
-    },
-    email: {
-      type: String,
-      required: [true, "אימייל נדרש"],
-    },
+    customerName: String,
+    email: String,
     items: [
       {
-        productId: String,
+        productId: mongoose.Schema.Types.ObjectId,
         name: String,
-        price: Number,
         quantity: Number,
+        price: Number,
       },
     ],
-    totalPrice: {
-      type: Number,
-      required: [true, "סכום כולל נדרש"],
-      description: "סכום כולל של ההזמנה",
-    },
+    totalPrice: Number,
     status: {
       type: String,
       enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
       default: "pending",
-      description: "סטטוס ההזמנה",
     },
-    shippingAddress: {
-      street: String,
-      city: String,
-      zipCode: String,
-      country: String,
-    },
+    shippingAddress: String,
     paymentMethod: String,
     notes: String,
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
-  {
-    timestamps: true,
-  },
+  { collection: "orders" }
 );
 
-const Order = mongoose.model("Order", orderSchema);
-
-export default Order;
+export default mongoose.model("Order", OrderSchema);

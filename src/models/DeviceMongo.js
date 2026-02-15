@@ -1,31 +1,24 @@
 import mongoose from "mongoose";
 
-const deviceSchema = new mongoose.Schema(
+const DeviceSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: [true, "ID של המשתמש נדרש"],
-      index: true,
+      required: true,
     },
     ipAddress: {
       type: String,
-      required: [true, "כתובת IP נדרשת"],
-      index: true,
+      required: true,
     },
-    deviceName: {
-      type: String,
-      default: "Unknown Device",
-    },
-    userAgent: {
-      type: String,
-    },
+    deviceName: String,
+    userAgent: String,
     location: {
-      country: { type: String, default: "Unknown" },
-      city: { type: String, default: "Unknown" },
+      country: String,
+      city: String,
       latitude: Number,
       longitude: Number,
-      timezone: { type: String, default: "Unknown" },
+      timezone: String,
     },
     blocked: {
       type: Boolean,
@@ -36,24 +29,16 @@ const deviceSchema = new mongoose.Schema(
       type: Number,
       default: 1,
     },
-    lastLogin: {
-      type: Date,
-      default: Date.now,
-      index: true,
-    },
+    lastLogin: Date,
     firstLogin: {
       type: Date,
       default: Date.now,
     },
   },
-  {
-    timestamps: true,
-  },
+  { collection: "devices" }
 );
 
-// Create unique index for userId + ipAddress combination
-deviceSchema.index({ userId: 1, ipAddress: 1 }, { unique: true });
+// Create unique index for userId + ipAddress
+DeviceSchema.index({ userId: 1, ipAddress: 1 }, { unique: true });
 
-const Device = mongoose.model("Device", deviceSchema);
-
-export default Device;
+export default mongoose.model("Device", DeviceSchema);

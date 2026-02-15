@@ -56,21 +56,17 @@ class ProductModel {
   _formatProduct(product) {
     if (!product) return null;
     return {
-      id: product._id?.toString() || product.id,
+      id: product._id.toString(),
       name: product.name,
-      nameEn: product.nameEn,
       description: product.description,
-      descriptionEn: product.descriptionEn,
       category: product.category,
       price: product.price,
       discountPrice: product.discountPrice,
-      images: product.images || [], // Firebase URLs
+      images: product.images,
       metals: product.metals,
-      letter: product.letter,
-      meaningHe: product.meaningHe,
-      meaningEn: product.meaningEn,
-      gematria: product.gematria,
-      types: product.types,
+      lengths: product.lengths,
+      chains: product.chains,
+      waxColors: product.waxColors,
       stock: product.stock,
       zodiacSign: product.zodiacSign,
       featured: product.featured,

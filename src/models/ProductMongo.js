@@ -1,75 +1,51 @@
 import mongoose from "mongoose";
 
-const productSchema = new mongoose.Schema(
+const ProductSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "נא להזין שם מוצר"],
-      trim: true,
+      required: true,
     },
     description: {
       type: String,
-      required: [true, "נא להזין תיאור מוצר"],
-    },
-    price: {
-      type: Number,
-      required: [true, "נא להזין מחיר"],
-      min: [0, "המחיר חייב להיות חיובי"],
-    },
-    discountPrice: {
-      type: Number,
-      default: null,
+      required: true,
     },
     category: {
       type: String,
-      required: [true, "נא לבחור קטגוריה"],
-      enum: ["מגן דוד", "חי", "חמסה", "מזוזה", "אותיות", "אחר"],
+      required: true,
+    },
+    price: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    discountPrice: {
+      type: Number,
+      min: 0,
     },
     images: [
       {
-        url: String,
+        url: String, // Cloudinary URL
         alt: String,
       },
     ],
     metals: [String],
-    lengths: [String],
-    chains: [String],
-    waxColors: [String],
     stock: {
       type: Number,
-      required: true,
       default: 0,
-      min: [0, "המלאי לא יכול להיות שלילי"],
     },
     zodiacSign: {
       type: String,
-      enum: [
-        "טלה",
-        "שור",
-        "תאומים",
-        "סרטן",
-        "אריה",
-        "בתולה",
-        "מאזניים",
-        "עקרב",
-        "קשת",
-        "גדי",
-        "דלי",
-        "דגים",
-        "כללי",
-      ],
       default: "כללי",
     },
-    isAvailable: {
+    featured: {
       type: Boolean,
-      default: true,
+      default: false,
     },
     rating: {
       average: {
         type: Number,
         default: 0,
-        min: 0,
-        max: 5,
       },
       count: {
         type: Number,
@@ -78,63 +54,22 @@ const productSchema = new mongoose.Schema(
     },
     reviews: [
       {
-        user: String,
-        name: {
-          type: String,
-          required: true,
-        },
-        rating: {
-          type: Number,
-          required: true,
-          min: 1,
-          max: 5,
-        },
-        comment: {
-          type: String,
-          required: true,
-        },
-        date: {
-          type: String,
-          default: () => new Date().toISOString(),
-        },
+        userId: mongoose.Schema.Types.ObjectId,
+        rating: Number,
+        comment: String,
+        date: Date,
       },
     ],
-    featured: {
-      type: Boolean,
-      default: false,
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
     },
   },
-  {
-    timestamps: true,
-  },
+  { collection: "products" }
 );
 
-// Update stock method
-productSchema.methods.updateStock = async function (quantity) {
-  if (this.stock < quantity) {
-    throw new Error("אין מספיק מלאי");
-  }
-  this.stock -= quantity;
-  this.isAvailable = this.stock > 0;
-  await this.save();
-  return this;
-};
-
-// Add review method
-productSchema.methods.addReview = async function (review) {
-  this.reviews.push(review);
-
-  // Recalculate rating
-  const sum = this.reviews.reduce((acc, item) => item.rating + acc, 0);
-  this.rating = {
-    average: sum / this.reviews.length,
-    count: this.reviews.length,
-  };
-
-  await this.save();
-  return this;
-};
-
-const Product = mongoose.model("Product", productSchema);
-
-export default Product;
+export default mongoose.model("Product", ProductSchema);

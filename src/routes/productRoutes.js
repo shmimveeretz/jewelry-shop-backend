@@ -7,14 +7,10 @@ import {
   deleteProduct,
   addReview,
 } from "../controllers/productController.js";
-import { importProducts } from "../controllers/importController.js";
 import { protect, admin } from "../middleware/auth.js";
 import { uploadSingle } from "../middleware/upload.js";
 
 const router = express.Router();
-
-// Import products from jewelry.json
-router.post("/import", protect, admin, importProducts);
 
 router
   .route("/")

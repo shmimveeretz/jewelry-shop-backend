@@ -17,17 +17,10 @@ export const getProducts = async (req, res) => {
     const skip = (page - 1) * limit;
 
     console.log("📋 Get Products Request:");
-    console.log("Filters:", {
-      category,
-      minPrice,
-      maxPrice,
-      limit,
-      page,
-      search,
-    });
+    console.log("Filters:", { category, minPrice, maxPrice, limit, page });
 
-    // Build filter for MongoDB
-    let filter = {};
+    // Build filter
+    let filter = { isAvailable: true };
 
     if (category && category !== "הכל") {
       filter.category = category;
@@ -46,14 +39,12 @@ export const getProducts = async (req, res) => {
       ];
     }
 
-    // Fetch products from MongoDB
+    // Fetch products with pagination
     const products = await Product.findAll(filter);
     const paginatedProducts = products.slice(skip, skip + parseInt(limit));
     const total = products.length;
 
-    console.log(
-      `✅ Found ${total} products, returning page ${page} with ${paginatedProducts.length} items`
-    );
+    console.log(`✅ Found ${total} products, returning page ${page}`);
 
     res.json({
       success: true,
@@ -62,7 +53,6 @@ export const getProducts = async (req, res) => {
       total,
       page: parseInt(page),
       limit: parseInt(limit),
-      totalPages: Math.ceil(total / parseInt(limit)),
     });
   } catch (error) {
     console.error("❌ Error getting products:", error);
