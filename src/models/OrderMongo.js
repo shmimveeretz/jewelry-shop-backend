@@ -39,7 +39,7 @@ const OrderSchema = new mongoose.Schema(
       default: Date.now,
     },
   },
-  { collection: "orders" }
+  { collection: "orders" },
 );
 
 export default mongoose.model("Order", OrderSchema);

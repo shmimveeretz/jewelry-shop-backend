@@ -899,5 +899,3 @@ export const sendBusinessOwnerOrderNotification = async (orderData) => {
     html,
   });
 };
-
-export default transporter;

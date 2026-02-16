@@ -41,7 +41,7 @@ const UserSchema = new mongoose.Schema(
       default: Date.now,
     },
   },
-  { collection: "users" }
+  { collection: "users" },
 );
 
 export default mongoose.model("User", UserSchema);

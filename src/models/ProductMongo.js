@@ -69,7 +69,7 @@ const ProductSchema = new mongoose.Schema(
       default: Date.now,
     },
   },
-  { collection: "products" }
+  { collection: "products" },
 );
 
 export default mongoose.model("Product", ProductSchema);

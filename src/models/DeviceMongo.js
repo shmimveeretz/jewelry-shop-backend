@@ -35,7 +35,7 @@ const DeviceSchema = new mongoose.Schema(
       default: Date.now,
     },
   },
-  { collection: "devices" }
+  { collection: "devices" },
 );
 
 // Create unique index for userId + ipAddress
