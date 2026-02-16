@@ -1,6 +1,7 @@
 # MongoDB Connection Fix - February 16, 2026
 
 ## Issue Fixed
+
 - ❌ Wrong MongoDB cluster in connection string
 - ✅ Updated to correct cluster: accounts.2zzwrzu.mongodb.net
 - ✅ Database: shamayim-vaaretz
