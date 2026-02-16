@@ -31,6 +31,40 @@ const app = express();
 // Security middleware
 app.use(helmet());
 
+// --- תיקון 1: עדכון רשימת הדומיינים המורשים ---
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://shmimveeretz.netlify.app",
+  "https://www.shmimveeretz.netlify.app",
+  "https://shmimveeretz.com", // <-- הוספנו את הדומיין הראשי
+  "https://www.shmimveeretz.com", // <-- הוספנו את ה-www
+].filter(Boolean);
+
+console.log("📝 CORS Allowed Origins:", allowedOrigins);
+
+// --- תיקון 2: העברת CORS לפני Rate Limiter ---
+// זה מונע מצב שהשרת חוסם בקשות בדיקה (OPTIONS) בגלל עומס
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        console.log("❌ CORS Blocked Origin:", origin); // הוספתי לוג ברור יותר
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // הגדרת מתודות מורשות
+    allowedHeaders: ["Content-Type", "Authorization"], // הגדרת כותרות מורשות
+  }),
+);
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
@@ -39,40 +73,6 @@ const limiter = rateLimit({
 });
 
 app.use("/api", limiter);
-
-// CORS - Support multiple origins
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "https://shmimveeretz.netlify.app",
-  "https://www.shmimveeretz.netlify.app",
-].filter(Boolean); // Remove undefined values
-
-console.log("📝 CORS Allowed Origins:", allowedOrigins);
-
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      console.log("🔍 Request origin:", origin);
-
-      // Allow requests with no origin (mobile apps, curl, etc.)
-      if (!origin) {
-        console.log("✅ No origin (mobile/curl)");
-        return callback(null, true);
-      }
-
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        console.log("✅ Origin allowed:", origin);
-        callback(null, true);
-      } else {
-        console.log("❌ Origin NOT allowed:", origin);
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  }),
-);
 
 // Body parser
 app.use(express.json());
@@ -124,11 +124,9 @@ const server = app.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
-║           🌟 שמיים וארץ - Shamayim VaAretz 🌟            ║
+║          🌟 שמיים וארץ - Shamayim VaAretz 🌟            ║
 ║                                                           ║
-║   Server running in ${
-    process.env.NODE_ENV || "development"
-  } mode                  ║
+║   Server running in ${process.env.NODE_ENV || "development"} mode                  ║
 ║   Port: ${PORT}                                           ║
 ║   URL: http://localhost:${PORT}                           ║
 ║                                                           ║
