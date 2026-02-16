@@ -28,6 +28,9 @@ initializeFirebase();
 
 const app = express();
 
+// Trust proxy - needed for rate limiting behind a reverse proxy (Render, etc.)
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 
