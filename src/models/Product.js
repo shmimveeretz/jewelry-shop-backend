@@ -44,7 +44,7 @@ class ProductModel {
   async findAll(filter = {}) {
     try {
       const products = await this.Model.find(filter);
-      return products.map(p => this._formatProduct(p));
+      return products.map((p) => this._formatProduct(p));
     } catch (error) {
       throw new Error(`Failed to fetch products: ${error.message}`);
     }
@@ -64,7 +64,7 @@ class ProductModel {
       const product = await this.Model.findOneAndUpdate(
         { id: id },
         productData,
-        { new: true }
+        { new: true },
       );
       return this._formatProduct(product);
     } catch (error) {
@@ -94,7 +94,7 @@ class ProductModel {
       });
 
       // Recalculate rating
-      const ratings = product.reviews.map(r => r.rating);
+      const ratings = product.reviews.map((r) => r.rating);
       product.rating.average = ratings.reduce((a, b) => a + b) / ratings.length;
       product.rating.count = ratings.length;
 
