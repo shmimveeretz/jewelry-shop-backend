@@ -1,45 +1,20 @@
-import nodemailer from "nodemailer";
+import sgMail from "@sendgrid/mail";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-// Create transporter using Google SMTP
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  host: "smtp.gmail.com",
-  port: 587, // TLS encryption (alternative to 465)
-  secure: false, // false for TLS on port 587
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.GOOGLE_EMAIL_APP_PASSWORD, // This should be your App Password!
-  },
-  connectionTimeout: 30000, // 30 seconds
-  socketTimeout: 30000, // 30 seconds
-});
-
-// Test connection on startup
-if (process.env.GOOGLE_EMAIL_APP_PASSWORD) {
-  transporter.verify((error, success) => {
-    if (error) {
-      console.error("❌ Email Service Verification Error:", error.message);
-      console.error("   Error Code:", error.code);
-      console.error("   Full Error:", JSON.stringify(error, null, 2));
-      console.warn(
-        "⚠️  Make sure GOOGLE_EMAIL_APP_PASSWORD is set correctly in environment variables",
-      );
-    } else {
-      console.log("✅ Gmail SMTP Service Ready");
-      console.log(`📧 Sending emails from: ${process.env.EMAIL_USER}`);
-    }
-  });
+// Set SendGrid API key
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  console.log("✅ SendGrid Email Service Initialized");
 } else {
   console.error(
-    "❌ CRITICAL: GOOGLE_EMAIL_APP_PASSWORD not set - Email service DISABLED",
+    "❌ CRITICAL: SENDGRID_API_KEY not set in environment variables",
   );
 }
 
 /**
- * Send email using Google SMTP
+ * Send email using SendGrid
  * @param {Object} mailOptions - Email options
  * @param {string} mailOptions.to - Recipient email
  * @param {string} mailOptions.subject - Email subject
@@ -49,28 +24,25 @@ if (process.env.GOOGLE_EMAIL_APP_PASSWORD) {
  */
 export const sendEmail = async (mailOptions) => {
   try {
-    // Check if password is set
-    if (!process.env.GOOGLE_EMAIL_APP_PASSWORD) {
-      throw new Error(
-        "GOOGLE_EMAIL_APP_PASSWORD is not set in environment variables",
-      );
+    if (!process.env.SENDGRID_API_KEY) {
+      throw new Error("SENDGRID_API_KEY is not set in environment variables");
     }
 
     const msg = {
-      from: process.env.EMAIL_USER,
       to: mailOptions.to,
+      from: process.env.EMAIL_USER || "noreply@shmimveeretz.com",
       subject: mailOptions.subject,
       text: mailOptions.text,
       html: mailOptions.html || mailOptions.text,
     };
 
     console.log("📧 Attempting to send email to:", mailOptions.to);
-    const result = await transporter.sendMail(msg);
+    const result = await sgMail.send(msg);
     console.log("✅ Email sent successfully to:", mailOptions.to);
     return {
       success: true,
       message: "Email sent successfully",
-      messageId: result.messageId,
+      messageId: result[0].headers["x-message-id"],
     };
   } catch (error) {
     console.error("❌ Email Send Error:", error.message);
