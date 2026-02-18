@@ -1,15 +1,32 @@
-import sgMail from "@sendgrid/mail";
+import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-// Set SendGrid API key
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+// Create transporter using Google SMTP
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465, // SSL encryption
+  secure: true, // true for 465, false for other ports
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.GOOGLE_EMAIL_APP_PASSWORD, // This should be your App Password!
+  },
+});
 
-console.log("✅ SendGrid Email Service Initialized");
+// Test connection on startup
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ Email Service Error:", error.message);
+  } else {
+    console.log("✅ Gmail SMTP Service Ready");
+    console.log(`📧 Sending emails from: ${process.env.EMAIL_USER}`);
+  }
+});
 
 /**
- * Send email using SendGrid
+ * Send email using Google SMTP
  * @param {Object} mailOptions - Email options
  * @param {string} mailOptions.to - Recipient email
  * @param {string} mailOptions.subject - Email subject
@@ -20,22 +37,22 @@ console.log("✅ SendGrid Email Service Initialized");
 export const sendEmail = async (mailOptions) => {
   try {
     const msg = {
+      from: process.env.EMAIL_USER,
       to: mailOptions.to,
-      from: process.env.EMAIL_USER || "noreply@shamayim-vaaretz.com",
       subject: mailOptions.subject,
       text: mailOptions.text,
       html: mailOptions.html || mailOptions.text,
     };
 
-    const result = await sgMail.send(msg);
-    console.log("✅ Email sent successfully:", mailOptions.to);
+    const result = await transporter.sendMail(msg);
+    console.log("✅ Email sent successfully to:", mailOptions.to);
     return {
       success: true,
       message: "Email sent successfully",
-      data: result,
+      messageId: result.messageId,
     };
   } catch (error) {
-    console.error("❌ SendGrid Email Error:", error.message);
+    console.error("❌ Email Send Error:", error.message);
     return {
       success: false,
       message: error.message,
