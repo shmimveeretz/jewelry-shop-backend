@@ -2,13 +2,20 @@ import mongoose from "mongoose";
 
 const ProductSchema = new mongoose.Schema(
   {
+    id: {
+      type: String,
+      required: true,
+      unique: true,
+    },
     name: {
       type: String,
       required: true,
     },
-    description: {
+    nameEn: {
       type: String,
-      required: true,
+    },
+    letter: {
+      type: String,
     },
     category: {
       type: String,
@@ -19,24 +26,34 @@ const ProductSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
-    discountPrice: {
-      type: Number,
-      min: 0,
+    priceAdditions: {
+      type: Map,
+      of: Number,
     },
-    images: [
-      {
-        url: String, // Cloudinary URL
-        alt: String,
-      },
-    ],
+    metalType: {
+      type: Map,
+      of: Number,
+    },
+    length: {
+      type: Map,
+      of: Number,
+    },
     metals: [String],
+    images: [String], // Array of Cloudinary URLs
+    description: {
+      type: String,
+      required: true,
+    },
+    meaningHe: {
+      type: String,
+    },
+    gematria: {
+      type: Number,
+    },
+    types: [String], // e.g., ["תליון", "טבעת"]
     stock: {
       type: Number,
       default: 0,
-    },
-    zodiacSign: {
-      type: String,
-      default: "כללי",
     },
     featured: {
       type: Boolean,
