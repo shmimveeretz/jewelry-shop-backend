@@ -37,8 +37,10 @@ const allowedOrigins = [
   "http://localhost:3000",
   "https://shmimveeretz.netlify.app",
   "https://www.shmimveeretz.netlify.app",
-  "https://shmimveeretz.com", // <-- הוספנו את הדומיין הראשי
-  "https://www.shmimveeretz.com", // <-- הוספנו את ה-www
+  "https://shmimveeretz.com",
+  "https://www.shmimveeretz.com",
+  "https://shmaimveeretz.com", // Typo variant - also allow
+  "https://www.shmaimveeretz.com", // Typo variant - also allow
 ].filter(Boolean);
 
 console.log("📝 CORS Allowed Origins:", allowedOrigins);
