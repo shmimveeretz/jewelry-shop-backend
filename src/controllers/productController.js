@@ -20,7 +20,7 @@ export const getProducts = async (req, res) => {
     console.log("Filters:", { category, minPrice, maxPrice, limit, page });
 
     // Build filter
-    let filter = { isAvailable: true };
+    let filter = {};
 
     if (category && category !== "הכל") {
       filter.category = category;
