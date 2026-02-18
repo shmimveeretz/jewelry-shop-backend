@@ -28,7 +28,15 @@ router.post("/contact", async (req, res) => {
       });
     }
 
-    await sendContactEmail({ name, email, phone, message });
+    const result = await sendContactEmail({ name, email, phone, message });
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: "שגיאה בשליחת ההודעה. נסה שוב מאוחר יותר.",
+        error: result.error,
+      });
+    }
 
     res.json({
       success: true,
@@ -39,6 +47,7 @@ router.post("/contact", async (req, res) => {
     res.status(500).json({
       success: false,
       message: "שגיאה בשליחת ההודעה. נסה שוב מאוחר יותר.",
+      error: error.message,
     });
   }
 });

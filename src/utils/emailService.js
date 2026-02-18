@@ -36,6 +36,11 @@ export const sendEmail = async (mailOptions) => {
       html: mailOptions.html || mailOptions.text,
     };
 
+    // Add replyTo if provided
+    if (mailOptions.replyTo) {
+      msg.replyTo = mailOptions.replyTo;
+    }
+
     console.log("📧 Attempting to send email to:", mailOptions.to);
     const result = await sgMail.send(msg);
     console.log("✅ Email sent successfully to:", mailOptions.to);
