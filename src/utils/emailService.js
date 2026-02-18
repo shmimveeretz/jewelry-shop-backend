@@ -7,8 +7,8 @@ dotenv.config();
 const transporter = nodemailer.createTransport({
   service: "gmail",
   host: "smtp.gmail.com",
-  port: 465, // SSL encryption
-  secure: true, // true for 465, false for other ports
+  port: 587, // TLS encryption (alternative to 465)
+  secure: false, // false for TLS on port 587
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.GOOGLE_EMAIL_APP_PASSWORD, // This should be your App Password!
