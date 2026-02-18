@@ -1,5 +1,5 @@
 import Product from "../models/Product.js";
-import { uploadFile, deleteFile } from "../utils/firebaseStorage.js";
+import { uploadImage, deleteImage } from "../utils/cloudinaryUpload.js";
 
 // @desc    Get all products with filters and pagination
 // @route   GET /api/products
@@ -128,7 +128,7 @@ export const createProduct = async (req, res) => {
     // Upload image to Cloudinary if provided
     if (req.file) {
       try {
-        const upload = await uploadFile(req.file, "products");
+        const upload = await uploadImage(req.file.buffer, "products");
         imageUrl = upload.url;
         console.log("📸 Image uploaded:", imageUrl);
       } catch (uploadError) {
@@ -217,11 +217,11 @@ export const updateProduct = async (req, res) => {
         // Delete old image from Cloudinary if exists
         if (existingProduct.images && existingProduct.images.length > 0) {
           const publicId = extractPublicId(existingProduct.images[0].url);
-          if (publicId) await deleteFile(publicId);
+          if (publicId) await deleteImage(publicId);
         }
 
         // Upload new image
-        const upload = await uploadFile(req.file, "products");
+        const upload = await uploadImage(req.file.buffer, "products");
         images = [{ url: upload.url, alt: name || existingProduct.name }];
         console.log("📸 Image updated:", images[0].url);
       } catch (uploadError) {
@@ -288,9 +288,9 @@ export const deleteProduct = async (req, res) => {
     if (product.images && product.images.length > 0) {
       try {
         const publicId = extractPublicId(product.images[0].url);
-        if (publicId) await deleteFile(publicId);
+        if (publicId) await deleteImage(publicId);
       } catch (error) {
-        console.warn("⚠️ Could not delete image from Firebase:", error);
+        console.warn("⚠️ Could not delete image from Cloudinary:", error);
       }
     }
 

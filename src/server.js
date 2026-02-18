@@ -5,7 +5,6 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 import connectDB from "./config/database.js";
-import { initializeFirebase } from "./config/firebase.js";
 
 // Import routes
 import authRoutes from "./routes/authRoutes.js";
@@ -23,13 +22,10 @@ dotenv.config();
 // Connect to MongoDB
 connectDB();
 
-// Initialize Firebase
-initializeFirebase();
-
 const app = express();
 
 // Trust proxy - needed for rate limiting behind a reverse proxy (Render, etc.)
-app.set('trust proxy', 1);
+app.set("trust proxy", 1);
 
 // Security middleware
 app.use(helmet());
