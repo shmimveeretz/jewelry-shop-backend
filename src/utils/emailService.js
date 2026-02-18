@@ -21,15 +21,21 @@ const transporter = nodemailer.createTransport({
 if (process.env.GOOGLE_EMAIL_APP_PASSWORD) {
   transporter.verify((error, success) => {
     if (error) {
-      console.error("❌ Email Service Error:", error.message);
-      console.warn("⚠️  Make sure GOOGLE_EMAIL_APP_PASSWORD is set in environment variables");
+      console.error("❌ Email Service Verification Error:", error.message);
+      console.error("   Error Code:", error.code);
+      console.error("   Full Error:", JSON.stringify(error, null, 2));
+      console.warn(
+        "⚠️  Make sure GOOGLE_EMAIL_APP_PASSWORD is set correctly in environment variables",
+      );
     } else {
       console.log("✅ Gmail SMTP Service Ready");
       console.log(`📧 Sending emails from: ${process.env.EMAIL_USER}`);
     }
   });
 } else {
-  console.warn("⚠️  GOOGLE_EMAIL_APP_PASSWORD not set - Email service disabled");
+  console.error(
+    "❌ CRITICAL: GOOGLE_EMAIL_APP_PASSWORD not set - Email service DISABLED",
+  );
 }
 
 /**
@@ -43,6 +49,13 @@ if (process.env.GOOGLE_EMAIL_APP_PASSWORD) {
  */
 export const sendEmail = async (mailOptions) => {
   try {
+    // Check if password is set
+    if (!process.env.GOOGLE_EMAIL_APP_PASSWORD) {
+      throw new Error(
+        "GOOGLE_EMAIL_APP_PASSWORD is not set in environment variables",
+      );
+    }
+
     const msg = {
       from: process.env.EMAIL_USER,
       to: mailOptions.to,
@@ -51,6 +64,7 @@ export const sendEmail = async (mailOptions) => {
       html: mailOptions.html || mailOptions.text,
     };
 
+    console.log("📧 Attempting to send email to:", mailOptions.to);
     const result = await transporter.sendMail(msg);
     console.log("✅ Email sent successfully to:", mailOptions.to);
     return {
@@ -60,10 +74,15 @@ export const sendEmail = async (mailOptions) => {
     };
   } catch (error) {
     console.error("❌ Email Send Error:", error.message);
+    console.error("   Error Code:", error.code);
+    console.error("   Error Details:", JSON.stringify(error, null, 2));
     return {
       success: false,
       message: error.message,
-      error,
+      error: {
+        code: error.code,
+        message: error.message,
+      },
     };
   }
 };
