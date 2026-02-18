@@ -13,17 +13,24 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.GOOGLE_EMAIL_APP_PASSWORD, // This should be your App Password!
   },
+  connectionTimeout: 30000, // 30 seconds
+  socketTimeout: 30000, // 30 seconds
 });
 
 // Test connection on startup
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("❌ Email Service Error:", error.message);
-  } else {
-    console.log("✅ Gmail SMTP Service Ready");
-    console.log(`📧 Sending emails from: ${process.env.EMAIL_USER}`);
-  }
-});
+if (process.env.GOOGLE_EMAIL_APP_PASSWORD) {
+  transporter.verify((error, success) => {
+    if (error) {
+      console.error("❌ Email Service Error:", error.message);
+      console.warn("⚠️  Make sure GOOGLE_EMAIL_APP_PASSWORD is set in environment variables");
+    } else {
+      console.log("✅ Gmail SMTP Service Ready");
+      console.log(`📧 Sending emails from: ${process.env.EMAIL_USER}`);
+    }
+  });
+} else {
+  console.warn("⚠️  GOOGLE_EMAIL_APP_PASSWORD not set - Email service disabled");
+}
 
 /**
  * Send email using Google SMTP

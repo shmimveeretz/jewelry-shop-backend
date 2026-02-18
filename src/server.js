@@ -39,8 +39,10 @@ const allowedOrigins = [
   "https://www.shmimveeretz.netlify.app",
   "https://shmimveeretz.com",
   "https://www.shmimveeretz.com",
-  "https://shmaimveeretz.com", // Typo variant - also allow
-  "https://www.shmaimveeretz.com", // Typo variant - also allow
+  "https://shmaimveeretz.com",
+  "https://www.shmaimveeretz.com",
+  "https://shamaimveeretz.com", // Another typo variant
+  "https://www.shamaimveeretz.com", // Another typo variant
 ].filter(Boolean);
 
 console.log("📝 CORS Allowed Origins:", allowedOrigins);
