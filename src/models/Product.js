@@ -107,9 +107,3 @@ class ProductModel {
 }
 
 export default new ProductModel();
-      throw error;
-    }
-  }
-}
-
-export default new ProductModel();
