@@ -2,11 +2,10 @@ import axios from "axios";
 
 const payPlusAPI = axios.create({
   baseURL:
-    process.env.PAYPLUS_API_URL || "https://restapi.payplus.co.il/api/v1.0g",
+    process.env.PAYPLUS_API_URL || "https://restapi.payplus.co.il/api/v1.0",
   headers: {
     Authorization: `Bearer ${process.env.PAYPLUS_SECRET_KEY}`,
     "Content-Type": "application/json",
-    "X-Merchant-Id": process.env.PAYPLUS_MERCHANT_ID,
   },
 });
 
@@ -17,11 +16,10 @@ const payPlusAPI = axios.create({
  */
 export const createPayPlusTransaction = async (paymentData) => {
   try {
-    const response = await payPlusAPI.post("/transactions/create", {
-      ...paymentData,
-      merchantId: process.env.PAYPLUS_MERCHANT_ID,
-      publicKey: process.env.PAYPLUS_PUBLIC_KEY,
-    });
+    const response = await payPlusAPI.post(
+      "/PaymentPages/generateLink",
+      paymentData,
+    );
     return response.data;
   } catch (error) {
     console.error("PayPlus API Error:", error.response?.data || error.message);
@@ -73,20 +71,8 @@ export const refundTransaction = async (transactionId, amount = null) => {
  * @returns {string} Payment page URL
  */
 export const generatePaymentURL = (transactionData) => {
-  const baseURL =
-    process.env.PAYPLUS_API_URL || "https://restapi.payplus.co.il/api/v1.0";
-  const params = new URLSearchParams({
-    merchantId: process.env.PAYPLUS_MERCHANT_ID,
-    transactionId: transactionData.transactionId,
-    returnUrl:
-      transactionData.returnUrl ||
-      `${process.env.FRONTEND_URL}/payment-success`,
-    notifyUrl: `${
-      process.env.BACKEND_URL || "https://jewelry-shop-udr7.onrender.com"
-    }/api/payment/webhook`,
-    lang: "he",
-  });
-  return `${baseURL}/checkout?${params.toString()}`;
+  // PayPlus returns the URL directly from generateLink
+  return transactionData.url || transactionData.paymentUrl;
 };
 
 export default payPlusAPI;

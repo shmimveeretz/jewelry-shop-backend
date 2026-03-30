@@ -5,14 +5,7 @@ import {
   sendCustomerOrderInvoice,
   sendBusinessOwnerOrderNotification,
 } from "../utils/emailService.js";
-
-const payPlusConfig = {
-  baseURL: process.env.PAYPLUS_API_URL || "https://api.payplus.co.il",
-  headers: {
-    Authorization: `Bearer ${process.env.PAYPLUS_SECRET_KEY}`,
-    "Content-Type": "application/json",
-  },
-};
+import { createPayPlusTransaction } from "../utils/payPlusAPI.js";
 
 // @desc    Create payment intent with PayPlus
 // @route   POST /api/payment/create-intent
@@ -23,34 +16,42 @@ export const createPaymentIntent = async (req, res) => {
 
     // Generate unique order ID (with or without user)
     const userId = req.user?.id || `guest_${Date.now()}`;
+    const orderId = `order_${Date.now()}_${userId}`;
 
+    // Format payload according to PayPlus API spec
     const paymentPayload = {
-      merchantId: process.env.PAYPLUS_MERCHANT_ID,
-      amount: Math.round(amount * 100), // Convert to agorot
-      currency,
-      orderId: `order_${Date.now()}_${userId}`,
-      description: `תשלום עבור הזמנה מ-Shamayim VaAretz`,
-      userId: userId,
-      items: orderItems,
+      payment_page_uid: process.env.PAYPLUS_MERCHANT_ID || "shmimveeretz.com", // Your payment page UID
+      charge_method: 1, // 1 = charge only (תשלום בלבד)
+      amount: Math.round(amount * 100) / 100, // Amount in shekels
+      currency_code: currency,
+      sendEmailApproval: true,
+      sendEmailFailure: false,
+      refURL_callback: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/payment/webhook`,
+      initial_invoice: true,
+      hide_identification_id: false,
+      more_info: orderId, // Send order ID in more_info
     };
 
-    const response = await axios.post(
-      `${payPlusConfig.baseURL}/transactions/create`,
-      paymentPayload,
-      { headers: payPlusConfig.headers }
+    console.log(
+      "📤 Sending to PayPlus:",
+      JSON.stringify(paymentPayload, null, 2),
     );
 
-    if (response.data && response.data.transactionId) {
+    const response = await createPayPlusTransaction(paymentPayload);
+
+    console.log("📥 PayPlus Response:", response);
+
+    if (response && (response.url || response.link)) {
       res.json({
         success: true,
         data: {
-          transactionId: response.data.transactionId,
-          paymentUrl: response.data.paymentUrl,
-          orderId: paymentPayload.orderId,
+          transactionId: response.id || response.transactionId || orderId,
+          paymentUrl: response.url || response.link || response.paymentUrl,
+          orderId: orderId,
         },
       });
     } else {
-      throw new Error("PayPlus - Failed to create payment intent");
+      throw new Error("PayPlus - Invalid response format");
     }
   } catch (error) {
     console.error("PayPlus Error:", error.response?.data || error.message);
@@ -89,30 +90,35 @@ export const createOrder = async (req, res) => {
     } = req.body;
 
     // Normalize data for both formats (old and new)
-    const normalizedItems = items?.map(item => ({
-      product: item.product || item.productId || item.id,
-      productId: item.productId || item.product || item.id,
-      name: item.name,
-      price: item.price,
-      quantity: item.quantity || 1,
-      selectedOptions: item.selectedOptions || {}
-    })) || [];
+    const normalizedItems =
+      items?.map((item) => ({
+        product: item.product || item.productId || item.id,
+        productId: item.productId || item.product || item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity || 1,
+        selectedOptions: item.selectedOptions || {},
+      })) || [];
 
     const normalizedShippingAddress = {
-      name: shippingAddress?.name || shippingAddress?.fullName || customerName || '',
-      phone: shippingAddress?.phone || customerPhone || '',
-      email: shippingAddress?.email || customerEmail || '',
-      street: shippingAddress?.street || shippingAddress?.address || '',
-      address: shippingAddress?.address || shippingAddress?.street || '',
-      city: shippingAddress?.city || '',
-      zipCode: shippingAddress?.zipCode || '',
-      country: shippingAddress?.country || 'ישראל'
+      name:
+        shippingAddress?.name ||
+        shippingAddress?.fullName ||
+        customerName ||
+        "",
+      phone: shippingAddress?.phone || customerPhone || "",
+      email: shippingAddress?.email || customerEmail || "",
+      street: shippingAddress?.street || shippingAddress?.address || "",
+      address: shippingAddress?.address || shippingAddress?.street || "",
+      city: shippingAddress?.city || "",
+      zipCode: shippingAddress?.zipCode || "",
+      country: shippingAddress?.country || "ישראל",
     };
 
     const normalizedPaymentInfo = paymentInfo || {
-      method: 'credit_card',
-      transactionId: '',
-      status: 'pending'
+      method: "credit_card",
+      transactionId: "",
+      status: "pending",
     };
 
     // Use totalAmount if totalPrice is not provided
@@ -151,8 +157,8 @@ export const createOrder = async (req, res) => {
         message: "חסרים פרטי משלוח. אנא מלא שם וטלפון.",
         debug: {
           receivedAddress: shippingAddress,
-          normalizedAddress: normalizedShippingAddress
-        }
+          normalizedAddress: normalizedShippingAddress,
+        },
       });
     }
 
@@ -467,7 +473,7 @@ export const debugOrder = async (req, res) => {
   try {
     console.log(
       "🔍 DEBUG - Full request body:",
-      JSON.stringify(req.body, null, 2)
+      JSON.stringify(req.body, null, 2),
     );
     console.log("🔍 DEBUG - User:", req.user ? req.user.id : "No user (Guest)");
 
@@ -516,7 +522,7 @@ export const payPlusWebhook = async (req, res) => {
           await Order.updatePaymentStatus(
             data.orderId,
             "completed",
-            data.transactionId
+            data.transactionId,
           );
 
           // Send order confirmation emails after payment approval
@@ -562,7 +568,7 @@ export const payPlusWebhook = async (req, res) => {
           await Order.updatePaymentStatus(
             data.orderId,
             "failed",
-            data.transactionId
+            data.transactionId,
           );
         }
         break;
@@ -573,7 +579,7 @@ export const payPlusWebhook = async (req, res) => {
           await Order.updatePaymentStatus(
             data.orderId,
             "pending",
-            data.transactionId
+            data.transactionId,
           );
         }
         break;
