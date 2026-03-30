@@ -1,7 +1,8 @@
 import axios from "axios";
 
 const payPlusAPI = axios.create({
-  baseURL: process.env.PAYPLUS_API_URL || "https://api.payplus.co.il",
+  baseURL:
+    process.env.PAYPLUS_API_URL || "https://restapi.payplus.co.il/api/v1.0g",
   headers: {
     Authorization: `Bearer ${process.env.PAYPLUS_SECRET_KEY}`,
     "Content-Type": "application/json",
@@ -25,7 +26,7 @@ export const createPayPlusTransaction = async (paymentData) => {
   } catch (error) {
     console.error("PayPlus API Error:", error.response?.data || error.message);
     throw new Error(
-      error.response?.data?.message || "Failed to create PayPlus transaction"
+      error.response?.data?.message || "Failed to create PayPlus transaction",
     );
   }
 };
@@ -57,7 +58,7 @@ export const refundTransaction = async (transactionId, amount = null) => {
       `/transactions/${transactionId}/refund`,
       {
         amount: amount || null,
-      }
+      },
     );
     return response.data;
   } catch (error) {
@@ -72,7 +73,8 @@ export const refundTransaction = async (transactionId, amount = null) => {
  * @returns {string} Payment page URL
  */
 export const generatePaymentURL = (transactionData) => {
-  const baseURL = process.env.PAYPLUS_API_URL || "https://api.payplus.co.il";
+  const baseURL =
+    process.env.PAYPLUS_API_URL || "https://restapi.payplus.co.il/api/v1.0";
   const params = new URLSearchParams({
     merchantId: process.env.PAYPLUS_MERCHANT_ID,
     transactionId: transactionData.transactionId,
@@ -80,7 +82,7 @@ export const generatePaymentURL = (transactionData) => {
       transactionData.returnUrl ||
       `${process.env.FRONTEND_URL}/payment-success`,
     notifyUrl: `${
-      process.env.BACKEND_URL || "http://localhost:5000"
+      process.env.BACKEND_URL || "https://jewelry-shop-udr7.onrender.com"
     }/api/payment/webhook`,
     lang: "he",
   });
