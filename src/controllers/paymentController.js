@@ -39,21 +39,21 @@ export const createPaymentIntent = async (req, res) => {
 
     const response = await createPayPlusTransaction(paymentPayload);
 
-    const paymentUrl = response?.data?.payment_page_link;
-    const transactionId = response?.data?.page_request_uid || orderId;
+    console.log("📥 PayPlus response:", JSON.stringify(response, null, 2));
+
+    const paymentUrl = response?.payment_page_link;
+    const transactionId = response?.page_request_uid || orderId;
 
     if (paymentUrl) {
       res.json({
         success: true,
-        data: {
-          transactionId,
-          paymentUrl,
-          orderId: orderId,
-        },
+        paymentPageUrl: paymentUrl,
+        transactionUid: transactionId,
+        orderId,
       });
     } else {
       throw new Error(
-        `PayPlus - Invalid response format. Full: ${JSON.stringify(response)}`
+        `PayPlus - Invalid response format. Full: ${JSON.stringify(response)}`,
       );
     }
   } catch (error) {
