@@ -4,12 +4,17 @@ const payPlusAPI = axios.create({
   baseURL:
     process.env.PAYPLUS_API_URL || "https://restapi.payplus.co.il/api/v1.0",
   headers: {
-    Authorization: JSON.stringify({
-      api_key: process.env.PAYPLUS_PUBLIC_KEY,
-      secret_key: process.env.PAYPLUS_SECRET_KEY,
-    }),
     "Content-Type": "application/json",
   },
+});
+
+// Set Authorization at request time (after dotenv.config() has run)
+payPlusAPI.interceptors.request.use((config) => {
+  config.headers.Authorization = JSON.stringify({
+    api_key: process.env.PAYPLUS_PUBLIC_KEY,
+    secret_key: process.env.PAYPLUS_SECRET_KEY,
+  });
+  return config;
 });
 
 /**
