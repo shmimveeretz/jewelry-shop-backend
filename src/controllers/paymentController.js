@@ -39,14 +39,39 @@ export const createPaymentIntent = async (req, res) => {
 
     const response = await createPayPlusTransaction(paymentPayload);
 
-    console.log("📥 PayPlus Response:", response);
+    console.log(
+      "📥 PayPlus Response (full):",
+      JSON.stringify(response, null, 2),
+    );
+    console.log(
+      "📥 PayPlus Response keys:",
+      response ? Object.keys(response) : "null",
+    );
 
-    if (response && (response.url || response.link)) {
+    if (
+      response &&
+      (response.url ||
+        response.link ||
+        response.payment_url ||
+        response.paymentUrl ||
+        response.data?.url ||
+        response.data?.link)
+    ) {
       res.json({
         success: true,
         data: {
-          transactionId: response.id || response.transactionId || orderId,
-          paymentUrl: response.url || response.link || response.paymentUrl,
+          transactionId:
+            response.id ||
+            response.transactionId ||
+            response.data?.id ||
+            orderId,
+          paymentUrl:
+            response.url ||
+            response.link ||
+            response.payment_url ||
+            response.paymentUrl ||
+            response.data?.url ||
+            response.data?.link,
           orderId: orderId,
         },
       });
