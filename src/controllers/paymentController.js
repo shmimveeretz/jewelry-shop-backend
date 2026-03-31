@@ -39,45 +39,21 @@ export const createPaymentIntent = async (req, res) => {
 
     const response = await createPayPlusTransaction(paymentPayload);
 
-    console.log(
-      "📥 PayPlus Response (full):",
-      JSON.stringify(response, null, 2),
-    );
-    console.log(
-      "📥 PayPlus Response keys:",
-      response ? Object.keys(response) : "null",
-    );
+    const paymentUrl = response?.data?.payment_page_link;
+    const transactionId = response?.data?.page_request_uid || orderId;
 
-    if (
-      response &&
-      (response.url ||
-        response.link ||
-        response.payment_url ||
-        response.paymentUrl ||
-        response.data?.url ||
-        response.data?.link)
-    ) {
+    if (paymentUrl) {
       res.json({
         success: true,
         data: {
-          transactionId:
-            response.id ||
-            response.transactionId ||
-            response.data?.id ||
-            orderId,
-          paymentUrl:
-            response.url ||
-            response.link ||
-            response.payment_url ||
-            response.paymentUrl ||
-            response.data?.url ||
-            response.data?.link,
+          transactionId,
+          paymentUrl,
           orderId: orderId,
         },
       });
     } else {
       throw new Error(
-        `PayPlus - Invalid response format. Keys received: ${response ? JSON.stringify(Object.keys(response)) : "null response"}. Full: ${JSON.stringify(response)}`
+        `PayPlus - Invalid response format. Full: ${JSON.stringify(response)}`
       );
     }
   } catch (error) {
