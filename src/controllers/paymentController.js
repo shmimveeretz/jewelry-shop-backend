@@ -8,7 +8,7 @@ import {
 import { createPayPlusTransaction } from "../utils/payPlusAPI.js";
 
 // @desc    Create payment intent with PayPlus
-// @route   POST /api/payment/create-intent
+// @route   POST /apicreate-intent
 // @access  Private
 export const createPaymentIntent = async (req, res) => {
   try {
@@ -26,7 +26,7 @@ export const createPaymentIntent = async (req, res) => {
       currency_code: currency,
       sendEmailApproval: true,
       sendEmailFailure: false,
-      refURL_callback: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/payment/webhook`,
+      refURL_callback: `${process.env.BACKEND_URL || "http://localhost:5000"}/apiwebhook`,
       initial_invoice: true,
       hide_identification_id: false,
       more_info: orderId, // Send order ID in more_info
@@ -63,7 +63,7 @@ export const createPaymentIntent = async (req, res) => {
 };
 
 // @desc    Create order after successful payment
-// @route   POST /api/payment/create-order
+// @route   POST /apicreate-order
 // @access  Public (supports both authenticated users and guests)
 export const createOrder = async (req, res) => {
   try {
@@ -267,7 +267,7 @@ export const createOrder = async (req, res) => {
 };
 
 // @desc    Get order by ID
-// @route   GET /api/payment/orders/:id
+// @route   GET /apiorders/:id
 // @access  Private
 export const getOrder = async (req, res) => {
   try {
@@ -301,7 +301,7 @@ export const getOrder = async (req, res) => {
 };
 
 // @desc    Get user orders
-// @route   GET /api/payment/my-orders
+// @route   GET /apimy-orders
 // @access  Private
 export const getMyOrders = async (req, res) => {
   try {
@@ -321,7 +321,7 @@ export const getMyOrders = async (req, res) => {
 };
 
 // @desc    Get all orders (Admin)
-// @route   GET /api/payment/orders
+// @route   GET /apiorders
 // @access  Private/Admin
 export const getAllOrders = async (req, res) => {
   try {
@@ -341,7 +341,7 @@ export const getAllOrders = async (req, res) => {
 };
 
 // @desc    Update order status (Admin)
-// @route   PUT /api/payment/orders/:id/status
+// @route   PUT /apiorders/:id/status
 // @access  Private/Admin
 export const updateOrderStatus = async (req, res) => {
   try {
@@ -369,7 +369,7 @@ export const updateOrderStatus = async (req, res) => {
 };
 
 // @desc    Test order creation with demo data (for testing emails)
-// @route   POST /api/payment/test-order
+// @route   POST /apitest-order
 // @access  Public (for demo purposes)
 export const testOrderDemo = async (req, res) => {
   try {
@@ -467,7 +467,7 @@ export const testOrderDemo = async (req, res) => {
 };
 
 // @desc    Debug endpoint - see what data is received
-// @route   POST /api/payment/debug-order
+// @route   POST /apidebug-order
 // @access  Public
 export const debugOrder = async (req, res) => {
   try {
@@ -499,7 +499,7 @@ export const debugOrder = async (req, res) => {
 };
 
 // @desc    Handle PayPlus webhook
-// @route   POST /api/payment/webhook
+// @route   POST /apiwebhook
 // @access  Public
 export const payPlusWebhook = async (req, res) => {
   try {
