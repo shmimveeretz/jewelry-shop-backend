@@ -41,8 +41,8 @@ export const createPaymentIntent = async (req, res) => {
 
     console.log("📥 PayPlus response:", JSON.stringify(response, null, 2));
 
-    const paymentUrl = response?.payment_page_link;
-    const transactionId = response?.page_request_uid || orderId;
+    const paymentUrl = response?.data?.payment_page_link;
+    const transactionId = response?.data?.page_request_uid || orderId;
 
     if (paymentUrl) {
       res.json({
