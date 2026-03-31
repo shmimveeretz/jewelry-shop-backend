@@ -76,13 +76,16 @@ export const createPaymentIntent = async (req, res) => {
         },
       });
     } else {
-      throw new Error("PayPlus - Invalid response format");
+      throw new Error(
+        `PayPlus - Invalid response format. Keys received: ${response ? JSON.stringify(Object.keys(response)) : "null response"}. Full: ${JSON.stringify(response)}`
+      );
     }
   } catch (error) {
     console.error("PayPlus Error:", error.response?.data || error.message);
     res.status(500).json({
       success: false,
       message: error.message || "שגיאה ביצירת עסקה",
+      debug: process.env.NODE_ENV !== "production" ? error.message : undefined,
     });
   }
 };
