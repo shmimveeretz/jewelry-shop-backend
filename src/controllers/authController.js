@@ -41,7 +41,9 @@ const getDeviceInfo = (userAgent) => {
 // @access  Public
 export const register = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, phone } = req.body;
+    const firstName = req.body.firstName || req.body.firstname;
+    const lastName = req.body.lastName || req.body.lastname;
+    const { email, password, phone } = req.body;
 
     // Validate required fields
     if (!firstName || !lastName || !email || !password || !phone) {
