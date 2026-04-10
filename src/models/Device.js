@@ -125,7 +125,7 @@ class DeviceModel {
       _id: device._id.toString(),
       userId: device.userId?._id || device.userId,
       ipAddress: device.ipAddress,
-      device"name": device.deviceName,
+      deviceName: device.deviceName,
       userAgent: device.userAgent,
       location: device.location,
       blocked: device.blocked,

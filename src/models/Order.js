@@ -155,7 +155,7 @@ class OrderModel {
       _id: order._id.toString(),
       orderId: order.orderId,
       userId: order.userId?._id || order.userId,
-      customer"name": order.customerName,
+      customerName: order.customerName,
       email: order.email,
       items: order.items,
       totalPrice: order.totalPrice,
