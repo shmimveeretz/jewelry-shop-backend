@@ -66,7 +66,7 @@ export const register = async (req, res) => {
     const token = generateToken(user.id);
 
     // Send welcome email to user (don't wait for it)
-    sendWelcomeEmail(email, { "name": `${firstName} ${lastName}` }).catch(
+    sendWelcomeEmail(email, { name: `${firstName} ${lastName}` }).catch(
       (error) => {
         console.error("Error sending welcome email:", error);
       },
@@ -74,7 +74,7 @@ export const register = async (req, res) => {
 
     // Send notification to admin (don't wait for it)
     sendNewUserNotificationToAdmin({
-      "name": `${firstName} ${lastName}`,
+      name: `${firstName} ${lastName}`,
       email,
       phone,
     }).catch((error) => {
