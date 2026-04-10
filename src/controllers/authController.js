@@ -85,7 +85,7 @@ export const register = async (req, res) => {
       token,
       data: {
         id: user.id,
-        first"name": user.firstName,
+        firstName: user.firstName,
         last"name": user.lastName,
         email: user.email,
         phone: user.phone,
@@ -197,7 +197,7 @@ export const login = async (req, res) => {
       token,
       data: {
         id: user.id,
-        first"name": user.firstName,
+        firstName: user.firstName,
         last"name": user.lastName,
         email: user.email,
         phone: user.phone,
@@ -484,7 +484,7 @@ export const verifyCode = async (req, res) => {
       message: "קוד אומת בהצלחה",
       resetToken,
       email: user.email,
-      first"name": user.firstName,
+      firstName: user.firstName,
       last"name": user.lastName,
     });
   } catch (error) {
@@ -635,7 +635,7 @@ export const changePassword = async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        first"name": user.firstName,
+        firstName: user.firstName,
         last"name": user.lastName,
       },
     });

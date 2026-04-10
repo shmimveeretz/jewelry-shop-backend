@@ -63,7 +63,7 @@ class UserModel {
 
       return {
         id: newUser._id.toString(),
-        first"name": newUser.firstName,
+        firstName: newUser.firstName,
         last"name": newUser.lastName,
         email: newUser.email,
         phone: newUser.phone,
@@ -91,7 +91,7 @@ class UserModel {
 
       return {
         id: user._id.toString(),
-        first"name": user.firstName,
+        firstName: user.firstName,
         last"name": user.lastName,
         email: user.email,
         phone: user.phone,
@@ -122,7 +122,7 @@ class UserModel {
 
       return {
         id: user._id.toString(),
-        first"name": user.firstName,
+        firstName: user.firstName,
         last"name": user.lastName,
         email: user.email,
         phone: user.phone,
@@ -179,7 +179,7 @@ class UserModel {
 
       return {
         id: user._id.toString(),
-        first"name": user.firstName,
+        firstName: user.firstName,
         last"name": user.lastName,
         email: user.email,
         phone: user.phone,
@@ -237,7 +237,7 @@ class UserModel {
       return users.map((user) => ({
         id: user._id.toString(),
         _id: user._id.toString(),
-        first"name": user.firstName,
+        firstName: user.firstName,
         last"name": user.lastName,
         email: user.email,
         phone: user.phone,
