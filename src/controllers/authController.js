@@ -204,7 +204,7 @@ export const login = async (req, res) => {
         role: user.role,
         deviceInfo: device
           ? {
-              device"name": device.deviceName,
+              deviceName: device.deviceName,
               ipAddress: device.ipAddress,
               loginCount: device.loginCount,
             }
@@ -390,9 +390,9 @@ export const forgotPassword = async (req, res) => {
 
       // Send email - use firstName/lastName
       const displayName = `${user.firstName} ${user.lastName}`;
-      console.log("📨 Sending email to:", email, "with "name":, displayName);
+      console.log("📨 Sending email to:", email, "with name:", displayName);
       await sendPasswordResetEmail(email, {
-        "name": displayName,
+        name: displayName,
         verificationCode: totpCode,
         resetUrl,
         qrCodeUrl,
