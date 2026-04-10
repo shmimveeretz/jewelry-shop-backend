@@ -33,14 +33,8 @@ app.use(helmet());
 // --- תיקון 1: עדכון רשימת הדומיינים המורשים ---
 const allowedOrigins = [
   process.env.FRONTEND_URL,
-  "http://localhost:5173",
-  "http://localhost:3000",
   "https://shmimveeretz.netlify.app",
   "https://www.shmimveeretz.netlify.app",
-  "https://shmimveeretz.com",
-  "https://www.shmimveeretz.com",
-  "https://shmaimveeretz.com",
-  "https://www.shmaimveeretz.com",
   "https://shamaimveeretz.com", // Another typo variant
   "https://www.shamaimveeretz.com", // Another typo variant
 ].filter(Boolean);

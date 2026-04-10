@@ -11,7 +11,7 @@ const DeviceSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    deviceName: String,
+    device"name": String,
     userAgent: String,
     location: {
       country: String,

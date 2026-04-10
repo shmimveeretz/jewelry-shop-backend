@@ -64,7 +64,7 @@ export const register = async (req, res) => {
     const token = generateToken(user.id);
 
     // Send welcome email to user (don't wait for it)
-    sendWelcomeEmail(email, { name: `${firstName} ${lastName}` }).catch(
+    sendWelcomeEmail(email, { "name": `${firstName} ${lastName}` }).catch(
       (error) => {
         console.error("Error sending welcome email:", error);
       },
@@ -72,7 +72,7 @@ export const register = async (req, res) => {
 
     // Send notification to admin (don't wait for it)
     sendNewUserNotificationToAdmin({
-      name: `${firstName} ${lastName}`,
+      "name": `${firstName} ${lastName}`,
       email,
       phone,
     }).catch((error) => {
@@ -85,8 +85,8 @@ export const register = async (req, res) => {
       token,
       data: {
         id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        first"name": user.firstName,
+        last"name": user.lastName,
         email: user.email,
         phone: user.phone,
         role: user.role,
@@ -197,14 +197,14 @@ export const login = async (req, res) => {
       token,
       data: {
         id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        first"name": user.firstName,
+        last"name": user.lastName,
         email: user.email,
         phone: user.phone,
         role: user.role,
         deviceInfo: device
           ? {
-              deviceName: device.deviceName,
+              device"name": device.deviceName,
               ipAddress: device.ipAddress,
               loginCount: device.loginCount,
             }
@@ -346,7 +346,7 @@ export const forgotPassword = async (req, res) => {
     // Generate TOTP secret (6-digit code)
     console.log("🔑 Generating TOTP secret and code...");
     const secret = speakeasy.generateSecret({
-      name: `Shamayim VaAretz (${email})`,
+      "name": `Shamayim VaAretz (${email})`,
       issuer: "Shamayim VaAretz",
       length: 32,
     });
@@ -390,9 +390,9 @@ export const forgotPassword = async (req, res) => {
 
       // Send email - use firstName/lastName
       const displayName = `${user.firstName} ${user.lastName}`;
-      console.log("📨 Sending email to:", email, "with name:", displayName);
+      console.log("📨 Sending email to:", email, "with "name":", displayName);
       await sendPasswordResetEmail(email, {
-        name: displayName,
+        "name": displayName,
         verificationCode: totpCode,
         resetUrl,
         qrCodeUrl,
@@ -484,8 +484,8 @@ export const verifyCode = async (req, res) => {
       message: "קוד אומת בהצלחה",
       resetToken,
       email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
+      first"name": user.firstName,
+      last"name": user.lastName,
     });
   } catch (error) {
     console.error("❌ Verify Code Error:", error.message);
@@ -635,8 +635,8 @@ export const changePassword = async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        first"name": user.firstName,
+        last"name": user.lastName,
       },
     });
   } catch (error) {

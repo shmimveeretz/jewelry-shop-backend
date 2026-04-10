@@ -34,7 +34,7 @@ export const getProducts = async (req, res) => {
 
     if (search) {
       filter.$or = [
-        { name: { $regex: search, $options: "i" } },
+        { "name": { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
       ];
     }
@@ -112,7 +112,7 @@ export const createProduct = async (req, res) => {
     } = req.body;
 
     console.log("📦 Create Product Request:");
-    console.log("Name:", name);
+    console.log(""name":", name);
     console.log("Price:", price);
 
     // Validate required fields

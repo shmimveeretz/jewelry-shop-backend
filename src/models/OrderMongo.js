@@ -11,12 +11,12 @@ const OrderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-    customerName: String,
+    customer"name": String,
     email: String,
     items: [
       {
         productId: mongoose.Schema.Types.ObjectId,
-        name: String,
+        "name": String,
         quantity: Number,
         price: Number,
       },
