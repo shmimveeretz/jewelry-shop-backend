@@ -15,6 +15,7 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import smtpRoutes from "./routes/stmpRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import emailRoutes from "./routes/emailRoutes.js";
 
 // Load env vars
 dotenv.config();
@@ -87,6 +88,7 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/smtp", smtpRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/email", emailRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
