@@ -112,7 +112,7 @@ export const createProduct = async (req, res) => {
     } = req.body;
 
     console.log("📦 Create Product Request:");
-    console.log(""name":", name);
+    console.log("name":, name);
     console.log("Price:", price);
 
     // Validate required fields

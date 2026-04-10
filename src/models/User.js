@@ -64,7 +64,7 @@ class UserModel {
       return {
         id: newUser._id.toString(),
         firstName: newUser.firstName,
-        last"name": newUser.lastName,
+        lastName: newUser.lastName,
         email: newUser.email,
         phone: newUser.phone,
         role: newUser.role,
@@ -92,7 +92,7 @@ class UserModel {
       return {
         id: user._id.toString(),
         firstName: user.firstName,
-        last"name": user.lastName,
+        lastName: user.lastName,
         email: user.email,
         phone: user.phone,
         role: user.role,
@@ -123,7 +123,7 @@ class UserModel {
       return {
         id: user._id.toString(),
         firstName: user.firstName,
-        last"name": user.lastName,
+        lastName: user.lastName,
         email: user.email,
         phone: user.phone,
         role: user.role,
@@ -180,7 +180,7 @@ class UserModel {
       return {
         id: user._id.toString(),
         firstName: user.firstName,
-        last"name": user.lastName,
+        lastName: user.lastName,
         email: user.email,
         phone: user.phone,
         role: user.role,
@@ -238,7 +238,7 @@ class UserModel {
         id: user._id.toString(),
         _id: user._id.toString(),
         firstName: user.firstName,
-        last"name": user.lastName,
+        lastName: user.lastName,
         email: user.email,
         phone: user.phone,
         role: user.role,
