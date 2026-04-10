@@ -49,11 +49,13 @@ class UserModel {
         throw new Error("משתמש עם אימייל זה כבר קיים");
       }
 
+      const hashedPassword = await this.hashPassword(password);
+
       const newUser = await this.Model.create({
         firstName,
         lastName,
         email: email.toLowerCase(),
-        password, // Will be hashed by pre-save hook
+        password: hashedPassword,
         phone: phone || "",
         role: "user",
         cart: [],
