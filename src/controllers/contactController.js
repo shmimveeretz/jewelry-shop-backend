@@ -1,18 +1,7 @@
-import nodemailer from "nodemailer";
+import { sendEmail } from "../utils/emailService.js";
 import dotenv from "dotenv";
 
 dotenv.config();
-
-// Create email transporter
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_APP_PASSWORD, // Gmail App Password
-    },
-  });
-};
 
 // Send contact form email
 export const sendContactEmail = async (req, res) => {
@@ -36,13 +25,8 @@ export const sendContactEmail = async (req, res) => {
       });
     }
 
-    const transporter = createTransporter();
-
     // Email to business owner
     const mailToOwner = {
-      from: process.env.EMAIL_USER,
-      to: process.env.EMAIL_RECIPIENT || process.env.EMAIL_USER,
-      subject: `הודעה חדשה מאתר שמיים וארץ: ${subject || "ללא נושא"}`,
       html: `
         <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f8f6; border-radius: 10px;">
           <div style="background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
@@ -85,9 +69,6 @@ export const sendContactEmail = async (req, res) => {
 
     // Confirmation email to customer
     const mailToCustomer = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "תודה על פניייתך - שמיים וארץ",
       html: `
         <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f8f6; border-radius: 10px;">
           <div style="background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
@@ -124,8 +105,17 @@ export const sendContactEmail = async (req, res) => {
     };
 
     // Send emails
-    await transporter.sendMail(mailToOwner);
-    await transporter.sendMail(mailToCustomer);
+    await sendEmail({
+      to: process.env.ADMIN_EMAIL || process.env.EMAIL_USER,
+      subject: `הודעה חדשה מאתר שמיים וארץ: ${subject || "ללא נושא"}`,
+      html: mailToOwner.html,
+      replyTo: email,
+    });
+    await sendEmail({
+      to: email,
+      subject: "תודה על פניייתך - שמיים וארץ",
+      html: mailToCustomer.html,
+    });
 
     res.status(200).json({
       success: true,
