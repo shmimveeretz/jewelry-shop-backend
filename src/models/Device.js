@@ -119,6 +119,53 @@ class DeviceModel {
     }
   }
 
+  async track(deviceData) {
+    try {
+      const { ipAddress, location, deviceName, browser, os, screen, language } = deviceData;
+
+      if (!ipAddress) {
+        throw new Error("ipAddress נדרש");
+      }
+
+      const existing = await this.Model.findOne({ ipAddress });
+
+      if (existing) {
+        const updated = await this.Model.findOneAndUpdate(
+          { ipAddress },
+          {
+            $inc: { loginCount: 1 },
+            lastLogin: new Date(),
+            ...(location && { location }),
+            ...(deviceName && { deviceName }),
+            ...(browser && { browser }),
+            ...(os && { os }),
+            ...(screen && { screen }),
+            ...(language && { language }),
+            updatedAt: new Date(),
+          },
+          { new: true },
+        );
+        return this.formatDevice(updated);
+      } else {
+        const created = await this.Model.create({
+          ipAddress,
+          location,
+          deviceName,
+          browser,
+          os,
+          screen,
+          language,
+          loginCount: 1,
+          firstLogin: new Date(),
+          lastLogin: new Date(),
+        });
+        return this.formatDevice(created);
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
+
   formatDevice(device) {
     return {
       id: device._id.toString(),
@@ -127,6 +174,10 @@ class DeviceModel {
       ipAddress: device.ipAddress,
       deviceName: device.deviceName,
       userAgent: device.userAgent,
+      browser: device.browser,
+      os: device.os,
+      screen: device.screen,
+      language: device.language,
       location: device.location,
       blocked: device.blocked,
       loginCount: device.loginCount,

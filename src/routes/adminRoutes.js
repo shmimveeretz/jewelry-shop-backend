@@ -15,6 +15,38 @@ const checkAdminOrROI = (req, res, next) => {
   next();
 };
 
+// @desc    Track a visitor device (no auth required - called before login)
+// @route   POST /api/admin/devices/track
+// @access  Public
+router.post("/devices/track", async (req, res) => {
+  try {
+    const { ipAddress, location, deviceName, browser, os, screen, language } =
+      req.body;
+
+    if (!ipAddress) {
+      return res.status(400).json({
+        success: false,
+        message: "ipAddress נדרש",
+      });
+    }
+
+    const device = await Device.track({
+      ipAddress,
+      location,
+      deviceName,
+      browser,
+      os,
+      screen,
+      language,
+    });
+
+    res.json({ success: true, data: device });
+  } catch (error) {
+    console.error("❌ Error tracking device:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // @desc    Get all devices with filtering
 // @route   GET /api/admin/devices
 // @access  Private/Admin/ROI

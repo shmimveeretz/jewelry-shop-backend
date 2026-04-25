@@ -13,6 +13,10 @@ const DeviceSchema = new mongoose.Schema(
     },
     deviceName: String,
     userAgent: String,
+    browser: String,
+    os: String,
+    screen: String,
+    language: String,
     location: {
       country: String,
       city: String,
