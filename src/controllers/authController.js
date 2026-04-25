@@ -180,14 +180,21 @@ export const login = async (req, res) => {
       device = await Device.updateLastLogin(user.id, clientIP);
       console.log("📱 Device login updated:", device?.deviceName);
     } else {
-      // Create new device entry
-      device = await Device.create({
-        userId: user.id,
-        ipAddress: clientIP,
-        deviceName,
-        userAgent,
-      });
-      console.log("✨ New device registered:", deviceName);
+      // Check if there's an anonymous tracking record for this IP and claim it
+      const anonDevice = await Device.findAnonymousByIP(clientIP);
+      if (anonDevice) {
+        device = await Device.claimDevice(anonDevice, user.id, deviceName, userAgent);
+        console.log("🔗 Anonymous device linked to user:", deviceName);
+      } else {
+        // Create new device entry
+        device = await Device.create({
+          userId: user.id,
+          ipAddress: clientIP,
+          deviceName,
+          userAgent,
+        });
+        console.log("✨ New device registered:", deviceName);
+      }
     }
 
     // Generate token

@@ -119,6 +119,32 @@ class DeviceModel {
     }
   }
 
+  async findAnonymousByIP(ipAddress) {
+    try {
+      const device = await this.Model.findOne({
+        ipAddress,
+        userId: { $exists: false },
+      });
+      return device || null;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async claimDevice(anonDevice, userId, deviceName, userAgent) {
+    try {
+      anonDevice.userId = userId;
+      if (deviceName) anonDevice.deviceName = anonDevice.deviceName || deviceName;
+      if (userAgent) anonDevice.userAgent = anonDevice.userAgent || userAgent;
+      anonDevice.lastLogin = new Date();
+      anonDevice.loginCount = (anonDevice.loginCount || 0) + 1;
+      await anonDevice.save();
+      return this.formatDevice(anonDevice);
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async track(deviceData) {
     try {
       const { ipAddress, location, deviceName, browser, os, screen, language } = deviceData;

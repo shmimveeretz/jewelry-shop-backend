@@ -5,7 +5,7 @@ const DeviceSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
     },
     ipAddress: {
       type: String,
@@ -42,7 +42,14 @@ const DeviceSchema = new mongoose.Schema(
   { collection: "devices" },
 );
 
-// Create unique index for userId + ipAddress
-DeviceSchema.index({ userId: 1, ipAddress: 1 }, { unique: true });
+// Unique per user+IP when userId exists; unique per IP alone for anonymous visitors
+DeviceSchema.index(
+  { userId: 1, ipAddress: 1 },
+  { unique: true, partialFilterExpression: { userId: { $exists: true } } },
+);
+DeviceSchema.index(
+  { ipAddress: 1 },
+  { unique: true, partialFilterExpression: { userId: { $exists: false } } },
+);
 
 export default mongoose.model("Device", DeviceSchema);
