@@ -183,7 +183,12 @@ export const login = async (req, res) => {
       // Check if there's an anonymous tracking record for this IP and claim it
       const anonDevice = await Device.findAnonymousByIP(clientIP);
       if (anonDevice) {
-        device = await Device.claimDevice(anonDevice, user.id, deviceName, userAgent);
+        device = await Device.claimDevice(
+          anonDevice,
+          user.id,
+          deviceName,
+          userAgent,
+        );
         console.log("🔗 Anonymous device linked to user:", deviceName);
       } else {
         // Create new device entry
@@ -355,7 +360,7 @@ export const forgotPassword = async (req, res) => {
     // Generate TOTP secret (6-digit code)
     console.log("🔑 Generating TOTP secret and code...");
     const secret = speakeasy.generateSecret({
-      "name": `Shamayim VaAretz (${email})`,
+      name: `Shamayim VaAretz (${email})`,
       issuer: "Shamayim VaAretz",
       length: 32,
     });

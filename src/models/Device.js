@@ -134,7 +134,8 @@ class DeviceModel {
   async claimDevice(anonDevice, userId, deviceName, userAgent) {
     try {
       anonDevice.userId = userId;
-      if (deviceName) anonDevice.deviceName = anonDevice.deviceName || deviceName;
+      if (deviceName)
+        anonDevice.deviceName = anonDevice.deviceName || deviceName;
       if (userAgent) anonDevice.userAgent = anonDevice.userAgent || userAgent;
       anonDevice.lastLogin = new Date();
       anonDevice.loginCount = (anonDevice.loginCount || 0) + 1;
@@ -147,7 +148,8 @@ class DeviceModel {
 
   async track(deviceData) {
     try {
-      const { ipAddress, location, deviceName, browser, os, screen, language } = deviceData;
+      const { ipAddress, location, deviceName, browser, os, screen, language } =
+        deviceData;
 
       if (!ipAddress) {
         throw new Error("ipAddress נדרש");

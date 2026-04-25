@@ -16,6 +16,7 @@ import smtpRoutes from "./routes/stmpRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import emailRoutes from "./routes/emailRoutes.js";
+import Device from "./models/Device.js";
 
 // Load env vars
 dotenv.config();
@@ -71,6 +72,32 @@ const limiter = rateLimit({
 });
 
 app.use("/api", limiter);
+
+// IP block enforcement - runs on every API request
+app.use("/api", async (req, res, next) => {
+  // Skip for the track endpoint (called before login)
+  if (req.path === "/admin/devices/track") return next();
+
+  try {
+    const clientIP =
+      req.headers["x-forwarded-for"]?.split(",")[0].trim() ||
+      req.ip ||
+      req.connection.remoteAddress;
+
+    const isBlocked = await Device.isIPBlocked(clientIP);
+    if (isBlocked) {
+      console.log(`🚫 Blocked IP attempted access: ${clientIP} → ${req.path}`);
+      return res.status(403).json({
+        success: false,
+        message: "כתובת IP זו נחסמה. אנא פנה לתמיכה",
+      });
+    }
+  } catch (err) {
+    // Don't block on DB errors — fail open
+    console.error("IP block check error:", err.message);
+  }
+  next();
+});
 
 // Body parser
 app.use(express.json());
