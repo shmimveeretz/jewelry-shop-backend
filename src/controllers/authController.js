@@ -1,10 +1,7 @@
 import User from "../models/User.js";
 import Device from "../models/Device.js";
 import { generateToken } from "../middleware/auth.js";
-import crypto from "crypto";
-import { v4 as uuidv4 } from "uuid";
 import speakeasy from "speakeasy";
-import QRCode from "qrcode";
 import {
   sendWelcomeEmail,
   sendNewUserNotificationToAdmin,
@@ -357,77 +354,50 @@ export const forgotPassword = async (req, res) => {
       });
     }
 
-    // Generate TOTP secret (6-digit code)
-    console.log("🔑 Generating TOTP secret and code...");
-    const secret = speakeasy.generateSecret({
-      name: `Shamaim VeEretz (${email})`,
-      issuer: "Shamaim VeEretz",
-      length: 32,
-    });
-
-    const totpCode = speakeasy.totp({
+    // Generate 6-digit verification code
+    console.log("🔑 Generating verification code...");
+    const secret = speakeasy.generateSecret({ length: 32 });
+    const verificationCode = speakeasy.totp({
       secret: secret.base32,
       encoding: "base32",
-      time: 300, // 5 minutes
+      time: 300,
     });
-
-    console.log("📝 TOTP Code generated:", totpCode);
-
-    // Generate Magic Link token
-    const magicToken = uuidv4();
-    const hashedToken = crypto
-      .createHash("sha256")
-      .update(magicToken)
-      .digest("hex");
-
-    console.log("🔗 Magic Link Token generated");
+    console.log("📝 Verification code generated");
 
     // Set expire (10 minutes)
     const verificationCodeExpire = Date.now() + 10 * 60 * 1000;
 
-    // Update user with verification code and magic token
-    console.log("💾 Updating user with verification code and token...");
+    // Save code to user
+    console.log("💾 Saving verification code to user...");
     await User.update(user.id, {
-      verificationCode: totpCode,
+      verificationCode,
       verificationCodeExpire,
-      resetPasswordToken: hashedToken,
-      resetPasswordExpire: verificationCodeExpire,
     });
-    console.log("✅ User updated with verification code and token");
+    console.log("✅ Verification code saved");
 
     try {
-      // Generate QR Code for the magic link
-      const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password/${magicToken}`;
-      console.log("🎯 Generating QR Code...");
-      const qrCodeUrl = await QRCode.toDataURL(resetUrl);
-      console.log("✅ QR Code generated");
-
-      // Send email - use firstName/lastName
       const displayName = `${user.firstName} ${user.lastName}`;
-      console.log("📨 Sending email to:", email, "with name:", displayName);
-      await sendPasswordResetEmail(email, {
+      console.log("📨 Sending reset email to:", email);
+      const emailResult = await sendPasswordResetEmail(email, {
         name: displayName,
-        verificationCode: totpCode,
-        resetUrl,
-        qrCodeUrl,
+        verificationCode,
       });
-      console.log("✅ Email sent successfully!");
 
+      if (!emailResult.success) {
+        throw new Error(emailResult.message);
+      }
+
+      console.log("✅ Reset email sent successfully!");
       res.json({
         success: true,
-        message: "נשלח אימייל עם קוד אימות וקישור Magic Link עם QR Code",
+        message: "נשלח אימייל עם קוד אימות לאיפוס סיסמה",
       });
     } catch (error) {
-      console.error("❌ Error sending email:", error.message);
-      console.error("Full error:", error);
-      // Clear verification code if email fails
+      console.error("❌ Error sending reset email:", error.message);
       await User.update(user.id, {
         verificationCode: undefined,
         verificationCodeExpire: undefined,
-        resetPasswordToken: undefined,
-        resetPasswordExpire: undefined,
       });
-
       return res.status(500).json({
         success: false,
         message: "שגיאה בשליחת האימייל",

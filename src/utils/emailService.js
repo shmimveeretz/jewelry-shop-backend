@@ -336,101 +336,151 @@ export const sendNewUserNotificationToAdmin = async (userData) => {
 };
 
 /**
- * Send password reset email with Magic Link + QR Code + TOTP
+ * Send password reset email with verification code only
  * @param {string} to - User email
- * @param {Object} resetData - Reset data with name, verificationCode, resetUrl, qrCodeUrl
+ * @param {Object} resetData - Reset data with name and verificationCode
  */
 export const sendPasswordResetEmail = async (to, resetData) => {
-  const { name, verificationCode, resetUrl, qrCodeUrl } = resetData;
+  const { name, verificationCode } = resetData;
 
-  const html = `
-    <div dir="rtl" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px;">
-      <div style="background-color: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-        
-        <!-- Header -->
-        <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #667eea; padding-bottom: 20px;">
-          <h1 style="color: #667eea; margin: 0; font-size: 32px; font-weight: bold;">🔐 איפוס סיסמה</h1>
-          <p style="color: #666; margin: 10px 0 0 0; font-size: 14px;">אתה בדרך לאיפוס סיסמה בטוח</p>
-        </div>
-        
-        <!-- Greeting -->
-        <h2 style="color: #333; margin-bottom: 20px; font-size: 20px;">שלום ${name} 👋</h2>
-        
-        <p style="font-size: 16px; line-height: 1.8; color: #555; margin-bottom: 15px;">
-          קיבלנו בקשה לאיפוס הסיסמה של חשבונך ב<strong>שמים וארץ</strong>.
-        </p>
-        
-        <!-- Option 1: TOTP Code -->
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 12px; margin: 30px 0; text-align: center;">
-          <p style="color: white; margin: 0 0 15px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">קוד אימות לשימוש חד-פעמי</p>
-          <div style="background-color: rgba(255,255,255,0.1); color: white; padding: 20px; border-radius: 8px; font-size: 42px; font-weight: bold; letter-spacing: 8px; font-family: 'Courier New', monospace; border: 2px solid rgba(255,255,255,0.3);">
-            ${verificationCode}
-          </div>
-          <p style="color: rgba(255,255,255,0.9); margin: 15px 0 0 0; font-size: 13px;">⏱️ תקף למשך 10 דקות בלבד</p>
-        </div>
-        
-        <!-- Divider -->
-        <div style="text-align: center; margin: 30px 0; position: relative;">
-          <p style="color: #ccc; margin: 0; font-size: 14px;">--- או ---</p>
-        </div>
-        
-        <!-- Option 2: Magic Link with QR Code -->
-        <div style="background-color: #f8f9ff; padding: 25px; border-radius: 12px; border: 2px dashed #667eea; margin: 30px 0;">
-          <p style="color: #333; text-align: center; margin: 0 0 20px 0; font-size: 14px; font-weight: bold;">🔗 Magic Link - לחץ כאן או סרוק QR</p>
-          
-          <!-- Magic Link Button -->
-          <div style="text-align: center; margin-bottom: 20px;">
-            <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: transform 0.2s;">
-              🔓 אפס סיסמה בקלות
-            </a>
-          </div>
-          
-          <!-- QR Code -->
-          <div style="text-align: center;">
-            ${qrCodeUrl ? `<img src="${qrCodeUrl}" alt="QR Code" style="width: 200px; height: 200px; border-radius: 8px; border: 2px solid #667eea; padding: 10px; background-color: white;">` : ""}
-          </div>
-        </div>
-        
-        <!-- Steps -->
-        <div style="background-color: #f0f7ff; padding: 20px; border-radius: 8px; margin: 30px 0; border-right: 4px solid #667eea;">
-          <p style="color: #333; margin: 0 0 15px 0; font-weight: bold; font-size: 14px;">📋 איך לאפס את הסיסמה:</p>
-          <ol style="color: #555; margin: 0; padding: 0 0 0 20px;">
-            <li style="margin-bottom: 10px;">לחץ על הקישור "אפס סיסמה בקלות" או סרוק את ה-QR Code</li>
-            <li style="margin-bottom: 10px;">או הזן את קוד האימות: <strong>${verificationCode}</strong></li>
-            <li style="margin-bottom: 10px;">הזן סיסמה חדשה וחזקה</li>
-            <li>התחבר עם הסיסמה החדשה שלך</li>
-          </ol>
-        </div>
-        
-        <!-- Warning -->
-        <div style="background-color: #fff5f5; padding: 15px; border-radius: 8px; border-right: 4px solid #dc2626; margin: 20px 0;">
-          <p style="margin: 0; color: #991b1b; font-size: 14px;">
-            ⏰ <strong>חשוב:</strong> קוד זה ו-Magic Link תוקפים ל-10 דקות בלבד מזמן קבלת האימייל הזה.
-          </p>
-        </div>
-        
-        <!-- Security Notice -->
-        <div style="background-color: #fffbeb; padding: 15px; border-radius: 8px; border-right: 4px solid #f59e0b; margin: 20px 0;">
-          <p style="margin: 0; color: #92400e; font-size: 13px;">
-            🚨 <strong>למען הביטחון:</strong> אם לא ביקשת לאפס סיסמה, התעלם מהודעה זו. חשבונך בטוח.
-          </p>
-        </div>
-        
-        <!-- Footer -->
-        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
-          <p style="color: #999; font-size: 12px; margin: 0;">
-            אימייל זה נשלח אוטומטית ואינו ניתן למענה.<br/>
-            © 2026 Shamaim VeEretz. כל הזכויות שמורות.
-          </p>
-        </div>
-        
-      </div>
-    </div>
-  `;
+  const html = `<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+</head>
+<body style="margin:0;padding:0;background-color:#fff8f0;font-family:'Manrope',Arial,sans-serif;color:#1f1b13;-webkit-font-smoothing:antialiased;">
+
+  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#fff8f0;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+
+        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;background-color:#ffffff;border:1px solid #d0c5af;">
+
+          <!-- HEADER -->
+          <tr>
+            <td align="center" style="padding:48px 32px 40px;background-color:#fbf3e5;border-bottom:1px solid #e8d8a0;">
+              <p style="margin:0 0 8px;font-size:20px;color:#d4af37;">&#9733;</p>
+              <h1 style="font-family:'Noto Serif',Georgia,serif;font-size:28px;font-weight:700;color:#735c00;margin:0 0 8px;letter-spacing:-0.5px;">שמיים וארץ</h1>
+              <p style="font-family:'Manrope',Arial,sans-serif;font-size:10px;color:#934b19;letter-spacing:3px;text-transform:uppercase;margin:0;opacity:0.8;">תכשיטי יהדות בעבודת יד</p>
+            </td>
+          </tr>
+
+          <!-- BODY -->
+          <tr>
+            <td style="padding:40px 48px;">
+
+              <!-- Greeting & Intro -->
+              <h2 style="font-family:'Noto Serif',Georgia,serif;font-size:22px;font-weight:600;color:#1f1b13;margin:0 0 16px;">שלום ${name},</h2>
+              <p style="font-family:'Manrope',Arial,sans-serif;font-size:15px;color:#4d4635;line-height:1.8;margin:0 0 32px;">
+                קיבלנו בקשה לאיפוס הסיסמה של חשבונך. הזן את הקוד הבא באתר כדי להמשיך בתהליך האיפוס.
+              </p>
+
+              <!-- Divider -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 36px;">
+                <tr>
+                  <td style="border-top:1px solid #d0c5af;"></td>
+                  <td style="padding:0 14px;font-size:12px;color:#d4af37;white-space:nowrap;">&#9670;</td>
+                  <td style="border-top:1px solid #d0c5af;"></td>
+                </tr>
+              </table>
+
+              <!-- Verification Code Box -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#efe7da;border:1px solid #d4af37;">
+                <tr>
+                  <td align="center" style="padding:36px 24px;">
+                    <p style="font-family:'Manrope',Arial,sans-serif;font-size:10px;font-weight:600;color:#934b19;letter-spacing:3px;text-transform:uppercase;margin:0 0 20px;">קוד אימות חד-פעמי</p>
+                    <table border="0" cellpadding="0" cellspacing="0" align="center">
+                      <tr>
+                        <td align="center" style="background-color:#d4af37;padding:18px 44px;">
+                          <span style="font-family:'Courier New',Courier,monospace;font-size:38px;font-weight:700;color:#ffffff;letter-spacing:12px;">${verificationCode}</span>
+                        </td>
+                      </tr>
+                    </table>
+                    <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin-top:20px;">
+                      <tr>
+                        <td style="padding-left:6px;font-family:'Manrope',Arial,sans-serif;font-size:12px;color:#4d4635;opacity:0.8;">תקף למשך 10 דקות בלבד</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Steps Box -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top:32px;border:1px solid #d0c5af;">
+                <tr>
+                  <td style="padding:24px 28px;">
+                    <p style="font-family:'Manrope',Arial,sans-serif;font-size:11px;font-weight:700;color:#735c00;letter-spacing:1px;text-transform:uppercase;margin:0 0 20px;">שלבים לאיפוס הסיסמה:</p>
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td width="32" valign="top" style="padding-bottom:14px;">
+                          <table border="0" cellpadding="0" cellspacing="0"><tr><td align="center" style="width:24px;height:24px;background-color:#ffe088;font-family:'Manrope',Arial,sans-serif;font-size:11px;font-weight:700;color:#554300;">1</td></tr></table>
+                        </td>
+                        <td style="padding-bottom:14px;padding-right:10px;font-family:'Manrope',Arial,sans-serif;font-size:14px;color:#4d4635;">העתק את הקוד המופיע למעלה.</td>
+                      </tr>
+                      <tr>
+                        <td width="32" valign="top" style="padding-bottom:14px;">
+                          <table border="0" cellpadding="0" cellspacing="0"><tr><td align="center" style="width:24px;height:24px;background-color:#ffe088;font-family:'Manrope',Arial,sans-serif;font-size:11px;font-weight:700;color:#554300;">2</td></tr></table>
+                        </td>
+                        <td style="padding-bottom:14px;padding-right:10px;font-family:'Manrope',Arial,sans-serif;font-size:14px;color:#4d4635;">חזור לדף אימות הסיסמה באתר "שמיים וארץ".</td>
+                      </tr>
+                      <tr>
+                        <td width="32" valign="top" style="padding-bottom:14px;">
+                          <table border="0" cellpadding="0" cellspacing="0"><tr><td align="center" style="width:24px;height:24px;background-color:#ffe088;font-family:'Manrope',Arial,sans-serif;font-size:11px;font-weight:700;color:#554300;">3</td></tr></table>
+                        </td>
+                        <td style="padding-bottom:14px;padding-right:10px;font-family:'Manrope',Arial,sans-serif;font-size:14px;color:#4d4635;">הזן את הקוד ולחץ על "אמת קוד".</td>
+                      </tr>
+                      <tr>
+                        <td width="32" valign="top">
+                          <table border="0" cellpadding="0" cellspacing="0"><tr><td align="center" style="width:24px;height:24px;background-color:#ffe088;font-family:'Manrope',Arial,sans-serif;font-size:11px;font-weight:700;color:#554300;">4</td></tr></table>
+                        </td>
+                        <td style="padding-right:10px;font-family:'Manrope',Arial,sans-serif;font-size:14px;color:#4d4635;">בחר סיסמה חדשה ומאובטחת עבור חשבונך.</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Security Notice -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top:24px;background-color:#ffe088;border-right:4px solid #d4af37;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <p style="font-family:'Manrope',Arial,sans-serif;font-size:13px;color:#554300;margin:0;line-height:1.6;">
+                      <strong>לא ביקשת לאפס סיסמה?</strong> התעלם מאימייל זה. חשבונך בטוח ואיש לא קיבל גישה למידע שלך.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background-color:#d4af37;padding:40px 32px;text-align:center;">
+              <p style="font-family:'Noto Serif',Georgia,serif;font-size:20px;font-weight:700;color:#241a00;margin:0 0 6px;">שמיים וארץ</p>
+              <p style="font-family:'Manrope',Arial,sans-serif;font-size:10px;color:#554300;letter-spacing:3px;text-transform:uppercase;margin:0 0 20px;opacity:0.9;">Handcrafted Jewish Jewelry</p>
+              <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin-bottom:20px;">
+                <tr><td style="width:64px;border-top:1px solid rgba(255,255,255,0.4);"></td></tr>
+              </table>
+              <p style="font-family:'Manrope',Arial,sans-serif;font-size:12px;color:#554300;margin:0 0 6px;opacity:0.9;">✉ ${process.env.EMAIL_USER}</p>
+              ${process.env.BUSINESS_PHONE ? `<p style="font-family:'Manrope',Arial,sans-serif;font-size:12px;color:#554300;margin:0 0 6px;opacity:0.9;">📞 ${process.env.BUSINESS_PHONE}</p>` : ""}
+              <p style="font-family:'Manrope',Arial,sans-serif;font-size:11px;color:#554300;margin:20px 0 0;opacity:0.7;">© כל הזכויות שמורות לשמיים וארץ. תשפ"ו.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`;
 
   return await sendEmail({
     to,
-    subject: "🔐 קוד איפוס סיסמה + Magic Link - שמים וארץ",
+    subject: "🔐 קוד איפוס סיסמה - שמיים וארץ",
     html,
   });
 };
