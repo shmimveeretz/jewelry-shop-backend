@@ -969,3 +969,94 @@ export const sendBusinessOwnerOrderNotification = async (orderData) => {
     html,
   });
 };
+
+/**
+ * Send newsletter welcome email with coupon code
+ * @param {string} to - Subscriber email
+ * @param {string} couponCode - Generated coupon code
+ */
+export const sendNewsletterWelcomeEmail = async (to, couponCode) => {
+  const html = `<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet"/>
+</head>
+<body style="margin:0;padding:0;background-color:#fff8f0;font-family:'Manrope',Arial,sans-serif;">
+  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#fff8f0;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;background-color:#ffffff;border:1px solid #d0c5af;">
+
+          <!-- HEADER -->
+          <tr>
+            <td align="center" style="padding:40px 32px 32px;background-color:#fbf3e5;border-bottom:1px solid #e8d8a0;">
+              <p style="margin:0 0 8px;font-size:20px;color:#d4af37;">&#9733;</p>
+              <h1 style="font-family:'Noto Serif',Georgia,serif;font-size:26px;font-weight:700;color:#735c00;margin:0 0 8px;">שמיים וארץ</h1>
+              <p style="font-family:'Manrope',Arial,sans-serif;font-size:10px;color:#934b19;letter-spacing:3px;text-transform:uppercase;margin:0;">תכשיטי יהדות בעבודת יד</p>
+            </td>
+          </tr>
+
+          <!-- BODY -->
+          <tr>
+            <td style="padding:40px 48px;">
+              <h2 style="font-family:'Noto Serif',Georgia,serif;font-size:22px;color:#1f1b13;margin:0 0 16px;">ברוכים הבאים לניוזלטר שלנו! 🎉</h2>
+              <p style="font-size:15px;color:#4d4635;line-height:1.8;margin:0 0 32px;">
+                תודה שנרשמת לעדכונים מאת שמיים וארץ. כמתנת הצטרפות, הנה קוד הנחה בלעדי עבורך:
+              </p>
+
+              <!-- Coupon Box -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#efe7da;border:1px solid #d4af37;margin-bottom:28px;">
+                <tr>
+                  <td align="center" style="padding:32px 24px;">
+                    <p style="font-size:10px;font-weight:600;color:#934b19;letter-spacing:3px;text-transform:uppercase;margin:0 0 16px;">קוד הנחה בלעדי — 5% הנחה</p>
+                    <table border="0" cellpadding="0" cellspacing="0" align="center">
+                      <tr>
+                        <td align="center" style="background-color:#d4af37;padding:16px 40px;">
+                          <span style="font-family:'Courier New',Courier,monospace;font-size:28px;font-weight:700;color:#ffffff;letter-spacing:6px;">${couponCode}</span>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="font-size:12px;color:#4d4635;margin:14px 0 0;">השתמש בקוד בעת הרכישה הבאה שלך</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Security Notice -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#ffe088;border-right:4px solid #d4af37;">
+                <tr>
+                  <td style="padding:14px 20px;">
+                    <p style="font-size:13px;color:#554300;margin:0;line-height:1.6;">
+                      💎 תוכל להשתמש בקוד בכל רכישה באתר שמיים וארץ. הקוד אינו מוגבל בזמן.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background-color:#d4af37;padding:36px 32px;text-align:center;">
+              <p style="font-family:'Noto Serif',Georgia,serif;font-size:18px;font-weight:700;color:#241a00;margin:0 0 6px;">שמיים וארץ</p>
+              <p style="font-size:10px;color:#554300;letter-spacing:3px;text-transform:uppercase;margin:0 0 16px;opacity:0.9;">Handcrafted Jewish Jewelry</p>
+              <p style="font-size:12px;color:#554300;margin:0 0 4px;opacity:0.9;">✉ ${process.env.EMAIL_USER}</p>
+              ${process.env.BUSINESS_PHONE ? `<p style="font-size:12px;color:#554300;margin:0 0 4px;opacity:0.9;">📞 ${process.env.BUSINESS_PHONE}</p>` : ""}
+              <p style="font-size:11px;color:#554300;margin:16px 0 0;opacity:0.7;">© כל הזכויות שמורות לשמיים וארץ.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  return await sendEmail({
+    to,
+    subject: "🎁 קוד הנחה בלעדי מאת שמיים וארץ",
+    html,
+  });
+};
