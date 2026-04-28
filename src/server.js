@@ -12,7 +12,7 @@ import userRoutes from "./routes/userRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
-import smtpRoutes from "./routes/stmpRoutes.js";
+// import smtpRoutes from "./routes/stmpRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import emailRoutes from "./routes/emailRoutes.js";
@@ -113,7 +113,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/contact", contactRoutes);
-app.use("/api/smtp", smtpRoutes);
+// app.use("/api/smtp", smtpRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/email", emailRoutes);
 
@@ -121,7 +121,7 @@ app.use("/api/email", emailRoutes);
 app.get("/api/health", (req, res) => {
   res.json({
     success: true,
-    message: "Shamayim VaAretz API is running",
+    message: "Shamaim VeEretz API is running",
     timestamp: new Date().toISOString(),
   });
 });
@@ -130,7 +130,7 @@ app.get("/api/health", (req, res) => {
 app.get("/", (req, res) => {
   res.json({
     success: true,
-    message: "Welcome to Shamayim VaAretz API",
+    message: "Welcome to Shamaim VeEretz API",
     version: "1.0.0",
     endpoints: {
       auth: "/api/auth",
@@ -150,7 +150,7 @@ const server = app.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
-║          🌟 שמיים וארץ - Shamayim VaAretz 🌟            ║
+║          🌟 שמים וארץ - Shamaim VeEretz 🌟            ║
 ║                                                           ║
 ║   Server running in ${process.env.NODE_ENV || "development"} mode                  ║
 ║   Port: ${PORT}                                           ║

@@ -82,7 +82,7 @@ export const sendOrderConfirmation = async (to, orderData) => {
   const html = `
         <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #4a5568; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
-                🌟 אישור הזמנה - שמיים וארץ
+                🌟 אישור הזמנה - שמים וארץ
             </h2>
             
             <p>שלום ${customerName},</p>
@@ -102,7 +102,7 @@ export const sendOrderConfirmation = async (to, orderData) => {
             
             <p style="margin-top: 30px;">נעדכן אותך כשההזמנה תישלח.</p>
             
-            <p>בברכה,<br>צוות שמיים וארץ 🌟</p>
+            <p>בברכה,<br>צוות שמים וארץ 🌟</p>
             
             <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
             
@@ -116,7 +116,7 @@ export const sendOrderConfirmation = async (to, orderData) => {
 
   return await sendEmail({
     to,
-    subject: `אישור הזמנה #${orderId} - שמיים וארץ`,
+    subject: `אישור הזמנה #${orderId} - שמים וארץ`,
     html,
   });
 };
@@ -139,7 +139,7 @@ export const sendOrderStatusUpdate = async (to, statusData) => {
   const html = `
         <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #4a5568; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
-                📦 עדכון סטטוס הזמנה - שמיים וארץ
+                📦 עדכון סטטוס הזמנה - שמים וארץ
             </h2>
             
             <p>שלום ${customerName},</p>
@@ -154,7 +154,7 @@ export const sendOrderStatusUpdate = async (to, statusData) => {
             
             <p>תודה על הסבלנות שלך!</p>
             
-            <p>בברכה,<br>צוות שמיים וארץ 🌟</p>
+            <p>בברכה,<br>צוות שמים וארץ 🌟</p>
             
             <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
             
@@ -199,7 +199,7 @@ export const sendContactEmail = async (contactData) => {
             <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
             
             <p style="font-size: 12px; color: #a0aec0;">
-                נשלח מאתר שמיים וארץ<br>
+                נשלח מאתר שמים וארץ<br>
                 ${new Date().toLocaleString("he-IL")}
             </p>
         </div>
@@ -225,13 +225,13 @@ export const sendWelcomeEmail = async (to, userData) => {
     <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f8f6; padding: 20px; border-radius: 10px;">
       <div style="background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #8b4513; margin: 0; font-size: 32px;">🌟 ברוך הבא לשמיים וארץ! 🌟</h1>
+          <h1 style="color: #8b4513; margin: 0; font-size: 32px;">🌟 ברוך הבא לשמים וארץ! 🌟</h1>
         </div>
         
         <h2 style="color: #8b4513; border-bottom: 3px solid #d4af37; padding-bottom: 10px;">שלום ${name},</h2>
         
         <p style="font-size: 16px; line-height: 1.8; color: #333;">
-          תודה שנרשמת לאתר שמיים וארץ! אנחנו שמחים שהצטרפת למשפחה שלנו.
+          תודה שנרשמת לאתר שמים וארץ! אנחנו שמחים שהצטרפת למשפחה שלנו.
         </p>
         
         <div style="background-color: #f9f8f6; padding: 20px; border-radius: 5px; margin: 20px 0;">
@@ -253,7 +253,7 @@ export const sendWelcomeEmail = async (to, userData) => {
         </div>
         
         <div style="margin-top: 30px; padding: 20px; background-color: #d4af37; color: white; border-radius: 5px; text-align: center;">
-          <h3 style="margin: 0 0 10px 0;">שמיים וארץ - תכשיטי יהדות בעבודת יד</h3>
+          <h3 style="margin: 0 0 10px 0;">שמים וארץ - תכשיטי יהדות בעבודת יד</h3>
           <p style="margin: 5px 0; font-size: 14px;">📧 ${
             process.env.EMAIL_USER
           }</p>
@@ -273,7 +273,7 @@ export const sendWelcomeEmail = async (to, userData) => {
 
   return await sendEmail({
     to,
-    subject: "🌟 ברוך הבא לשמיים וארץ - הרשמה הושלמה בהצלחה",
+    subject: "🌟 ברוך הבא לשמים וארץ - הרשמה הושלמה בהצלחה",
     html,
   });
 };
@@ -322,7 +322,7 @@ export const sendNewUserNotificationToAdmin = async (userData) => {
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
         
         <p style="font-size: 12px; color: #6b7280; text-align: center;">
-          הודעה זו נשלחה אוטומטית ממערכת שמיים וארץ
+          הודעה זו נשלחה אוטומטית ממערכת שמים וארץ
         </p>
       </div>
     </div>
@@ -357,7 +357,7 @@ export const sendPasswordResetEmail = async (to, resetData) => {
         <h2 style="color: #333; margin-bottom: 20px; font-size: 20px;">שלום ${name} 👋</h2>
         
         <p style="font-size: 16px; line-height: 1.8; color: #555; margin-bottom: 15px;">
-          קיבלנו בקשה לאיפוס הסיסמה של חשבונך ב<strong>שמיים וארץ</strong>.
+          קיבלנו בקשה לאיפוס הסיסמה של חשבונך ב<strong>שמים וארץ</strong>.
         </p>
         
         <!-- Option 1: TOTP Code -->
@@ -420,7 +420,7 @@ export const sendPasswordResetEmail = async (to, resetData) => {
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
           <p style="color: #999; font-size: 12px; margin: 0;">
             אימייל זה נשלח אוטומטית ואינו ניתן למענה.<br/>
-            © 2026 Shamayim VaAretz. כל הזכויות שמורות.
+            © 2026 Shamaim VeEretz. כל הזכויות שמורות.
           </p>
         </div>
         
@@ -430,7 +430,7 @@ export const sendPasswordResetEmail = async (to, resetData) => {
 
   return await sendEmail({
     to,
-    subject: "🔐 קוד איפוס סיסמה + Magic Link - שמיים וארץ",
+    subject: "🔐 קוד איפוס סיסמה + Magic Link - שמים וארץ",
     html,
   });
 };
@@ -521,7 +521,7 @@ export const sendCustomerOrderInvoice = async (to, orderData) => {
         
         <!-- Header -->
         <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid transparent; border-image: linear-gradient(to left, #d4af37, #f4e5c3, #d4af37) 1;">
-          <h1 style="color: #2c3e50; margin: 0; font-size: 36px; font-weight: 300; letter-spacing: 3px; text-transform: uppercase;">שמיים וארץ</h1>
+          <h1 style="color: #2c3e50; margin: 0; font-size: 36px; font-weight: 300; letter-spacing: 3px; text-transform: uppercase;">שמים וארץ</h1>
           <p style="color: #7f8c8d; margin: 15px 0 0 0; font-size: 14px; font-weight: 300; letter-spacing: 2px; text-transform: uppercase;">תכשיטי יהדות בעבודת יד</p>
         </div>
         
@@ -624,7 +624,7 @@ export const sendCustomerOrderInvoice = async (to, orderData) => {
         
         <!-- Footer -->
         <div style="margin-top: 30px; padding: 20px; background-color: #d4af37; color: white; border-radius: 5px; text-align: center;">
-          <h3 style="margin: 0 0 10px 0;">שמיים וארץ - תכשיטי יהדות בעבודת יד</h3>
+          <h3 style="margin: 0 0 10px 0;">שמים וארץ - תכשיטי יהדות בעבודת יד</h3>
           <p style="margin: 5px 0; font-size: 14px;">📧 ${
             process.env.EMAIL_USER
           }</p>
@@ -637,7 +637,7 @@ export const sendCustomerOrderInvoice = async (to, orderData) => {
         </div>
         
         <div style="margin-top: 20px; text-align: center; color: #888; font-size: 12px;">
-          <p>תודה שבחרת בשמיים וארץ!</p>
+          <p>תודה שבחרת בשמים וארץ!</p>
         </div>
       </div>
     </div>
@@ -645,7 +645,7 @@ export const sendCustomerOrderInvoice = async (to, orderData) => {
 
   return await sendEmail({
     to,
-    subject: `✅ חשבונית והזמנה #${orderNumber} - שמיים וארץ`,
+    subject: `✅ חשבונית והזמנה #${orderNumber} - שמים וארץ`,
     html,
   });
 };
@@ -737,7 +737,7 @@ export const sendBusinessOwnerOrderNotification = async (orderData) => {
         
         <!-- Header -->
         <div style="text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid transparent; border-image: linear-gradient(to left, #d4af37, #f4e5c3, #d4af37) 1;">
-          <h1 style="color: #2c3e50; margin: 0; font-size: 32px; font-weight: 300; letter-spacing: 3px; text-transform: uppercase;">שמיים וארץ</h1>
+          <h1 style="color: #2c3e50; margin: 0; font-size: 32px; font-weight: 300; letter-spacing: 3px; text-transform: uppercase;">שמים וארץ</h1>
           <p style="color: #7f8c8d; margin: 10px 0 0 0; font-size: 12px; font-weight: 300; letter-spacing: 2px;">מערכת ניהול הזמנות</p>
         </div>
         

@@ -1,7 +1,7 @@
 {
   "name": "shamayim-vaaretz-backend",
   "version": "1.0.0",
-  "description": "Backend API for Shamayim VaAretz Jewelry Shop",
+  "description": "Backend API for Shamaim VeEretz Jewelry Shop",
   "main": "src/server.js",
   "type": "module",
   "scripts": {

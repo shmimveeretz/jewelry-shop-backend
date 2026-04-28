@@ -360,8 +360,8 @@ export const forgotPassword = async (req, res) => {
     // Generate TOTP secret (6-digit code)
     console.log("🔑 Generating TOTP secret and code...");
     const secret = speakeasy.generateSecret({
-      name: `Shamayim VaAretz (${email})`,
-      issuer: "Shamayim VaAretz",
+      name: `Shamaim VeEretz (${email})`,
+      issuer: "Shamaim VeEretz",
       length: 32,
     });
 
