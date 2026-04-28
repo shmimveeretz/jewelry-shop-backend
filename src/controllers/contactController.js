@@ -105,12 +105,22 @@ export const sendContactEmail = async (req, res) => {
     };
 
     // Send emails
-    await sendEmail({
+    const ownerResult = await sendEmail({
       to: process.env.ADMIN_EMAIL || process.env.EMAIL_USER,
       subject: `הודעה חדשה מאתר שמיים וארץ: ${subject || "ללא נושא"}`,
       html: mailToOwner.html,
       replyTo: email,
     });
+
+    if (!ownerResult.success) {
+      console.error("❌ Failed to send email to owner:", ownerResult.error);
+      return res.status(500).json({
+        success: false,
+        message: "אירעה שגיאה בשליחת ההודעה. אנא נסה שוב מאוחר יותר.",
+        error: process.env.NODE_ENV === "development" ? ownerResult.error : undefined,
+      });
+    }
+
     await sendEmail({
       to: email,
       subject: "תודה על פניייתך - שמיים וארץ",
