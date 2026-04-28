@@ -332,76 +332,45 @@ export const updatePassword = async (req, res) => {
 // @access  Public
 export const forgotPassword = async (req, res) => {
   try {
-    console.log("🔐 Forgot Password Request received");
     const { email } = req.body;
-    console.log("📧 Email:", email);
+    if (!email)
+      return res
+        .status(400)
+        .json({ success: false, message: "נא להזין כתובת אימייל" });
 
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: "נא להזין כתובת אימייל",
-      });
-    }
-
-    console.log("🔍 Looking for user with email:", email);
     const user = await User.findByEmail(email);
-    console.log("👤 User found:", user ? "YES ✓" : "NO ✗");
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "לא נמצא משתמש עם כתובת אימייל זו" });
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "לא נמצא משתמש עם כתובת אימייל זו",
-      });
-    }
-
-    // Generate 6-digit verification code
-    console.log("🔑 Generating verification code...");
     const secret = speakeasy.generateSecret({ length: 32 });
     const verificationCode = speakeasy.totp({
       secret: secret.base32,
       encoding: "base32",
       time: 300,
     });
-    console.log("📝 Verification code generated");
+    const verificationCodeExpire = new Date(Date.now() + 10 * 60 * 1000);
 
-    // Set expire (10 minutes)
-    const verificationCodeExpire = Date.now() + 10 * 60 * 1000;
-
-    // Save code to user
-    console.log("💾 Saving verification code to user...");
-    await User.update(user.id, {
-      verificationCode,
-      verificationCodeExpire,
-    });
-    console.log("✅ Verification code saved");
+    await User.update(user.id, { verificationCode, verificationCodeExpire });
 
     try {
-      const displayName = `${user.firstName} ${user.lastName}`;
-      console.log("📨 Sending reset email to:", email);
       const emailResult = await sendPasswordResetEmail(email, {
-        name: displayName,
+        name: `${user.firstName} ${user.lastName}`,
         verificationCode,
       });
+      if (!emailResult.success) throw new Error(emailResult.message);
 
-      if (!emailResult.success) {
-        throw new Error(emailResult.message);
-      }
-
-      console.log("✅ Reset email sent successfully!");
-      res.json({
-        success: true,
-        message: "נשלח אימייל עם קוד אימות לאיפוס סיסמה",
-      });
+      res.json({ success: true, message: "נשלח קוד אימות לאימייל" });
     } catch (error) {
-      console.error("❌ Error sending reset email:", error.message);
+      console.error("❌ Reset email error:", error.message);
       await User.update(user.id, {
-        verificationCode: undefined,
-        verificationCodeExpire: undefined,
+        verificationCode: null,
+        verificationCodeExpire: null,
       });
-      return res.status(500).json({
-        success: false,
-        message: "שגיאה בשליחת האימייל",
-      });
+      return res
+        .status(500)
+        .json({ success: false, message: "שגיאה בשליחת האימייל" });
     }
   } catch (error) {
     console.error("❌ Forgot Password Error:", error.message);
@@ -420,49 +389,25 @@ export const verifyCode = async (req, res) => {
   try {
     const { email, code } = req.body;
 
-    console.log("✅ Verify Code Request");
-    console.log("📧 Email:", email);
-    console.log("🔢 Code:", code);
+    if (!email || !code)
+      return res
+        .status(400)
+        .json({ success: false, message: "נא להזין אימייל וקוד אימות" });
 
-    if (!email || !code) {
-      return res.status(400).json({
-        success: false,
-        message: "נא להזין אימייל וקוד אימות",
-      });
-    }
-
-    // Find user by email
     const user = await User.findByEmail(email);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "משתמש לא נמצא",
-      });
-    }
-
-    // Check if verification code matches and not expired
-    console.log("🔍 Checking verification code...");
-    console.log("📝 Stored code:", user.verificationCode);
-    console.log("📝 Provided code:", code);
-    console.log("⏰ Expiration:", new Date(user.verificationCodeExpire));
-    console.log("⏰ Now:", new Date());
+    if (!user)
+      return res.status(404).json({ success: false, message: "משתמש לא נמצא" });
 
     if (
       user.verificationCode !== code ||
       user.verificationCodeExpire < Date.now()
     ) {
-      return res.status(400).json({
-        success: false,
-        message: "קוד לא תקף או פג תוקף",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "קוד לא תקף או פג תוקף" });
     }
 
-    console.log("✅ Code verified successfully!");
-
-    // Generate a temporary token for password reset
     const resetToken = generateToken(user.id);
-
     res.json({
       success: true,
       message: "קוד אומת בהצלחה",
@@ -473,10 +418,7 @@ export const verifyCode = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Verify Code Error:", error.message);
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -488,66 +430,35 @@ export const resetPassword = async (req, res) => {
     const { password } = req.body;
     const { code } = req.params;
 
-    console.log("🔓 Reset Password Request");
-    console.log("📝 Code:", code);
+    if (!password)
+      return res
+        .status(400)
+        .json({ success: false, message: "נא להזין סיסמה חדשה" });
+    if (!code)
+      return res.status(400).json({ success: false, message: "קוד אימות חסר" });
 
-    if (!password) {
-      return res.status(400).json({
-        success: false,
-        message: "נא להזין סיסמה חדשה",
-      });
-    }
-
-    if (!code) {
-      return res.status(400).json({
-        success: false,
-        message: "קוד אימות חסר",
-      });
-    }
-
-    // Find user by verification code and check if not expired
-    console.log("🔍 Looking for user with code:", code);
     const users = await User.findAll();
     const user = users.find(
       (u) =>
         u.verificationCode === code && u.verificationCodeExpire > Date.now(),
     );
 
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: "קוד לא תקף או פג תוקף",
-      });
-    }
+    if (!user)
+      return res
+        .status(400)
+        .json({ success: false, message: "קוד לא תקף או פג תוקף" });
 
-    console.log("✅ Valid code found, user:", user.email);
-
-    // Set new password
-    console.log("🔐 Updating password...");
     await User.updatePassword(user.id, password);
-
-    // Clear verification code
     await User.update(user.id, {
-      verificationCode: undefined,
-      verificationCodeExpire: undefined,
+      verificationCode: null,
+      verificationCodeExpire: null,
     });
 
-    console.log("✅ Password updated successfully");
-
-    // Generate new JWT token
     const token = generateToken(user.id);
-
-    res.json({
-      success: true,
-      message: "הסיסמה שונתה בהצלחה",
-      token,
-    });
+    res.json({ success: true, message: "הסיסמה שונתה בהצלחה", token });
   } catch (error) {
     console.error("❌ Reset Password Error:", error.message);
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

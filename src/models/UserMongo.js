@@ -32,6 +32,12 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    verificationCode: {
+      type: String,
+    },
+    verificationCodeExpire: {
+      type: Date,
+    },
     createdAt: {
       type: Date,
       default: Date.now,

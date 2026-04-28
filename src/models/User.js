@@ -248,6 +248,10 @@ class UserModel {
         cart: user.cart,
         wishlist: user.wishlist,
         orders: user.orders,
+        verificationCode: user.verificationCode,
+        verificationCodeExpire: user.verificationCodeExpire
+          ? new Date(user.verificationCodeExpire).getTime()
+          : undefined,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       }));
