@@ -17,13 +17,19 @@ export const verifyPayment = async (req, res) => {
     const orderDataRaw = req.query.orderData;
 
     if (!transactionUid) {
-      return res.status(400).json({ success: false, message: "Missing transactionUid" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing transactionUid" });
     }
 
     // Idempotency — don't save the same order twice
     const existing = await OrderMongo.findOne({ transactionUid });
     if (existing) {
-      return res.json({ success: true, data: existing, message: "Order already saved" });
+      return res.json({
+        success: true,
+        data: existing,
+        message: "Order already saved",
+      });
     }
 
     // Parse orderData sent by frontend as query param
@@ -32,10 +38,14 @@ export const verifyPayment = async (req, res) => {
       try {
         orderData = JSON.parse(decodeURIComponent(orderDataRaw));
       } catch {
-        return res.status(400).json({ success: false, message: "Invalid orderData format" });
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid orderData format" });
       }
     } else {
-      return res.status(400).json({ success: false, message: "Missing orderData" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing orderData" });
     }
 
     // Create the order
@@ -50,13 +60,19 @@ export const verifyPayment = async (req, res) => {
       taxPrice: 0,
       shippingPrice: order.shippingPrice,
       totalPrice: order.totalPrice,
-      paymentInfo: { method: "credit_card", status: "completed", transactionId: transactionUid },
+      paymentInfo: {
+        method: "credit_card",
+        status: "completed",
+        transactionId: transactionUid,
+      },
       createdAt: order.createdAt,
       customerEmail: order.customerEmail,
     };
 
     Promise.all([
-      order.customerEmail ? sendCustomerOrderInvoice(order.customerEmail, emailData) : Promise.resolve(),
+      order.customerEmail
+        ? sendCustomerOrderInvoice(order.customerEmail, emailData)
+        : Promise.resolve(),
       sendBusinessOwnerOrderNotification({ ...emailData, userId: "guest" }),
     ]).catch((err) => console.error("❌ Order email error:", err.message));
 

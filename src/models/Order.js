@@ -166,7 +166,8 @@ class OrderModel {
           selectedOptions: item.selectedOptions || {},
         })),
         shippingAddress: {
-          fullName: orderData.shippingAddress?.fullName || orderData.customerName,
+          fullName:
+            orderData.shippingAddress?.fullName || orderData.customerName,
           address: orderData.shippingAddress?.address || "",
           city: orderData.shippingAddress?.city || "",
           zipCode: orderData.shippingAddress?.zipCode || "",
