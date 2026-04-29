@@ -103,10 +103,7 @@ export const generatePaymentLink = async ({
 
     const data = response.data?.data ?? response.data;
     const paymentPageUrl =
-      data?.payment_page_link ||
-      data?.paymentUrl ||
-      data?.url ||
-      null;
+      data?.payment_page_link || data?.paymentUrl || data?.url || null;
 
     if (!paymentPageUrl) {
       throw new Error(
@@ -196,9 +193,7 @@ export const createManualDocument = async (
       vatType: item.vatType ?? vatType,
     })),
     payments:
-      payments.length > 0
-        ? payments
-        : [{ paymentMethod: 4, sum: totalAmount }], // default: credit card
+      payments.length > 0 ? payments : [{ paymentMethod: 4, sum: totalAmount }], // default: credit card
     totalAmount,
     currency_code,
     vatType,

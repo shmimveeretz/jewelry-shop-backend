@@ -753,7 +753,10 @@ export const createDocumentHandler = async (req, res) => {
     if (!Array.isArray(items) || items.length === 0) {
       return res
         .status(400)
-        .json({ success: false, message: "items הוא שדה חובה ולא יכול להיות ריק" });
+        .json({
+          success: false,
+          message: "items הוא שדה חובה ולא יכול להיות ריק",
+        });
     }
     if (totalAmount == null || isNaN(Number(totalAmount))) {
       return res
