@@ -10,6 +10,8 @@ import {
   testOrderDemo,
   debugOrder,
   verifyPayment,
+  generatePaymentLinkHandler,
+  createDocumentHandler,
 } from "../controllers/paymentController.js";
 import { protect, admin, optionalProtect } from "../middleware/auth.js";
 
@@ -17,6 +19,12 @@ const router = express.Router();
 
 // Payment verification - saves order after PayPlus redirects back
 router.get("/verify/:transactionUid", verifyPayment);
+
+// PayPlus enhanced payment link (includes initial_invoice: true)
+router.post("/generate-link", generatePaymentLinkHandler);
+
+// PayPlus Books — create fiscal document (admin only)
+router.post("/documents/:docType", protect, admin, createDocumentHandler);
 
 // Demo/Test routes (public for easy testing)
 router.post("/test-order", testOrderDemo);

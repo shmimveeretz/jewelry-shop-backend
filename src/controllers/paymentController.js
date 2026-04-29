@@ -6,7 +6,11 @@ import {
   sendCustomerOrderInvoice,
   sendBusinessOwnerOrderNotification,
 } from "../utils/emailService.js";
-import { createPayPlusTransaction } from "../utils/payPlusAPI.js";
+import {
+  createPayPlusTransaction,
+  generatePaymentLink,
+  createManualDocument,
+} from "../utils/payPlusAPI.js";
 
 // @desc    Verify PayPlus payment and save order to DB
 // @route   GET /api/payment/verify/:transactionUid
@@ -675,5 +679,102 @@ export const payPlusWebhook = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+// @desc    Generate a PayPlus payment link (with initial_invoice: true)
+// @route   POST /api/payment/generate-link
+// @access  Public
+export const generatePaymentLinkHandler = async (req, res) => {
+  try {
+    const {
+      amount,
+      currency_code,
+      description,
+      customerName,
+      customerEmail,
+      customerPhone,
+      moreInfo,
+      successUrl,
+      failureUrl,
+    } = req.body;
+
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "amount חייב להיות מספר חיובי" });
+    }
+
+    const result = await generatePaymentLink({
+      amount: Number(amount),
+      currency_code,
+      description,
+      customerName,
+      customerEmail,
+      customerPhone,
+      moreInfo,
+      successUrl,
+      failureUrl,
+      notifyUrl: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/payment/webhook`,
+    });
+
+    res.json({
+      success: true,
+      paymentPageUrl: result.paymentPageUrl,
+      pageRequestUid: result.pageRequestUid,
+    });
+  } catch (error) {
+    console.error("❌ generatePaymentLinkHandler:", error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Create a fiscal document via PayPlus Books API
+// @route   POST /api/payment/documents/:docType
+// @access  Private/Admin
+export const createDocumentHandler = async (req, res) => {
+  try {
+    const { docType } = req.params;
+    const {
+      customer,
+      items,
+      payments,
+      totalAmount,
+      currency_code,
+      vatType,
+      remarks,
+    } = req.body;
+
+    if (!customer?.name) {
+      return res
+        .status(400)
+        .json({ success: false, message: "customer.name הוא שדה חובה" });
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "items הוא שדה חובה ולא יכול להיות ריק" });
+    }
+    if (totalAmount == null || isNaN(Number(totalAmount))) {
+      return res
+        .status(400)
+        .json({ success: false, message: "totalAmount הוא שדה חובה" });
+    }
+
+    const result = await createManualDocument(docType, {
+      customer,
+      items,
+      payments,
+      totalAmount: Number(totalAmount),
+      currency_code,
+      vatType,
+      remarks,
+    });
+
+    res.status(201).json({ success: true, data: result });
+  } catch (error) {
+    console.error("❌ createDocumentHandler:", error.message);
+    const status = error.message.startsWith("Invalid docType") ? 400 : 500;
+    res.status(status).json({ success: false, message: error.message });
   }
 };
