@@ -1,11 +1,71 @@
 import axios from "axios";
 import Order from "../models/Order.js";
+import OrderMongo from "../models/OrderMongo.js";
 import Product from "../models/Product.js";
 import {
   sendCustomerOrderInvoice,
   sendBusinessOwnerOrderNotification,
 } from "../utils/emailService.js";
 import { createPayPlusTransaction } from "../utils/payPlusAPI.js";
+
+// @desc    Verify PayPlus payment and save order to DB
+// @route   GET /api/payment/verify/:transactionUid
+// @access  Public
+export const verifyPayment = async (req, res) => {
+  try {
+    const { transactionUid } = req.params;
+    const orderDataRaw = req.query.orderData;
+
+    if (!transactionUid) {
+      return res.status(400).json({ success: false, message: "Missing transactionUid" });
+    }
+
+    // Idempotency — don't save the same order twice
+    const existing = await OrderMongo.findOne({ transactionUid });
+    if (existing) {
+      return res.json({ success: true, data: existing, message: "Order already saved" });
+    }
+
+    // Parse orderData sent by frontend as query param
+    let orderData;
+    if (orderDataRaw) {
+      try {
+        orderData = JSON.parse(decodeURIComponent(orderDataRaw));
+      } catch {
+        return res.status(400).json({ success: false, message: "Invalid orderData format" });
+      }
+    } else {
+      return res.status(400).json({ success: false, message: "Missing orderData" });
+    }
+
+    // Create the order
+    const order = await Order.createFromPayment(orderData, transactionUid);
+
+    // Send confirmation emails (non-blocking)
+    const emailData = {
+      orderNumber: transactionUid,
+      items: order.items,
+      shippingAddress: order.shippingAddress,
+      itemsPrice: order.itemsPrice,
+      taxPrice: 0,
+      shippingPrice: order.shippingPrice,
+      totalPrice: order.totalPrice,
+      paymentInfo: { method: "credit_card", status: "completed", transactionId: transactionUid },
+      createdAt: order.createdAt,
+      customerEmail: order.customerEmail,
+    };
+
+    Promise.all([
+      order.customerEmail ? sendCustomerOrderInvoice(order.customerEmail, emailData) : Promise.resolve(),
+      sendBusinessOwnerOrderNotification({ ...emailData, userId: "guest" }),
+    ]).catch((err) => console.error("❌ Order email error:", err.message));
+
+    res.json({ success: true, data: order });
+  } catch (error) {
+    console.error("❌ Verify Payment Error:", error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 // @desc    Create payment intent with PayPlus
 // @route   POST /apicreate-intent

@@ -9,10 +9,14 @@ import {
   payPlusWebhook,
   testOrderDemo,
   debugOrder,
+  verifyPayment,
 } from "../controllers/paymentController.js";
 import { protect, admin, optionalProtect } from "../middleware/auth.js";
 
 const router = express.Router();
+
+// Payment verification - saves order after PayPlus redirects back
+router.get("/verify/:transactionUid", verifyPayment);
 
 // Demo/Test routes (public for easy testing)
 router.post("/test-order", testOrderDemo);

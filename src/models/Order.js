@@ -149,6 +149,43 @@ class OrderModel {
     }
   }
 
+  /**
+   * Create order from verified PayPlus payment (new flow)
+   */
+  async createFromPayment(orderData, transactionUid) {
+    try {
+      const doc = await this.Model.create({
+        customerName: orderData.customerName,
+        customerEmail: orderData.customerEmail,
+        customerPhone: orderData.customerPhone || "",
+        items: (orderData.items || []).map((item) => ({
+          productId: item.productId || item.id || "",
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity || 1,
+          selectedOptions: item.selectedOptions || {},
+        })),
+        shippingAddress: {
+          fullName: orderData.shippingAddress?.fullName || orderData.customerName,
+          address: orderData.shippingAddress?.address || "",
+          city: orderData.shippingAddress?.city || "",
+          zipCode: orderData.shippingAddress?.zipCode || "",
+        },
+        itemsPrice: orderData.itemsPrice || 0,
+        shippingPrice: orderData.shippingPrice || 0,
+        totalPrice: orderData.totalPrice,
+        couponCode: orderData.couponCode || null,
+        discountPercent: orderData.discountPercent || 0,
+        paymentStatus: "completed",
+        transactionUid,
+        status: "pending",
+      });
+      return this.formatOrder(doc);
+    } catch (error) {
+      throw error;
+    }
+  }
+
   formatOrder(order) {
     return {
       id: order._id.toString(),
@@ -156,11 +193,19 @@ class OrderModel {
       orderId: order.orderId,
       userId: order.userId?._id || order.userId,
       customerName: order.customerName,
-      email: order.email,
+      customerEmail: order.customerEmail || order.email,
+      customerPhone: order.customerPhone,
+      email: order.email || order.customerEmail,
       items: order.items,
-      totalPrice: order.totalPrice,
-      status: order.status,
       shippingAddress: order.shippingAddress,
+      itemsPrice: order.itemsPrice,
+      shippingPrice: order.shippingPrice,
+      totalPrice: order.totalPrice,
+      couponCode: order.couponCode,
+      discountPercent: order.discountPercent,
+      paymentStatus: order.paymentStatus,
+      transactionUid: order.transactionUid,
+      status: order.status,
       paymentMethod: order.paymentMethod,
       notes: order.notes,
       createdAt: order.createdAt,
