@@ -616,17 +616,14 @@ export const debugOrder = async (req, res) => {
 // @route   POST /apiwebhook
 // @access  Public
 export const payPlusWebhook = async (req, res) => {
-  // Always respond 200 immediately so PayPlus doesn't retry
-  res.status(200).json({ received: true });
-
   try {
     console.log("🔔 PayPlus Webhook received:");
     console.log(JSON.stringify(req.body, null, 2));
 
     const payload = req.body;
 
-    // ── 1. Extract transaction identifiers ────────────────────────────────────
-    // PayPlus S2S callback fields (may be nested under data or at root level)
+    // ── 1. Extract transaction data ───────────────────────────────────────────
+    // PayPlus S2S callback may nest fields under a "data" key or at root level
     const data = payload?.data ?? payload;
 
     const transactionUid =
@@ -642,14 +639,15 @@ export const payPlusWebhook = async (req, res) => {
       payload?.status ??
       null;
 
+    // more_info contains the local orderId we set when generating the link
     const moreInfo = data?.more_info ?? payload?.more_info ?? null;
 
     console.log("📌 transaction_uid:", transactionUid);
     console.log("📌 status_code:", statusCode);
-    console.log("📌 more_info:", moreInfo);
+    console.log("📌 more_info (local orderId):", moreInfo);
 
-    // ── 2. Validate that the transaction is approved ──────────────────────────
-    // PayPlus uses status_code 1 or status "approved" for successful payments
+    // ── 2. Check payment approval ─────────────────────────────────────────────
+    // PayPlus uses status_code === 1 (or "approved") for successful payments
     const isApproved =
       statusCode === 1 ||
       statusCode === "1" ||
@@ -659,84 +657,110 @@ export const payPlusWebhook = async (req, res) => {
 
     if (!isApproved) {
       console.warn(
-        `⚠️ Webhook ignored — transaction not approved. status_code: ${statusCode}`,
+        `⚠️ Webhook ignored — payment not approved. status_code: ${statusCode}`,
       );
-      return;
+      return res.status(200).send("OK");
     }
 
     if (!transactionUid) {
-      console.error("❌ Webhook missing transaction_uid — cannot save order");
-      return;
-    }
-
-    // ── 3. Idempotency — skip if already saved ────────────────────────────────
-    const existing = await OrderMongo.findOne({ transactionUid });
-    if (existing) {
-      console.log(
-        `ℹ️ Order for transaction ${transactionUid} already saved — skipping`,
+      console.error(
+        "❌ Webhook missing transaction_uid — cannot process order",
       );
-      return;
+      return res.status(200).send("OK");
     }
 
-    // ── 4. Build order from webhook payload ───────────────────────────────────
+    // ── 3. Extract customer details from payload ──────────────────────────────
     const customer = data?.customer ?? {};
     const customerName =
-      customer?.customer_name ??
-      customer?.name ??
-      data?.full_name ??
-      moreInfo ??
-      "לקוח";
+      customer?.customer_name ?? customer?.name ?? data?.full_name ?? "לקוח";
     const customerEmail = customer?.email ?? data?.email ?? "";
     const customerPhone = customer?.phone ?? data?.phone ?? "";
     const totalPrice = Number(data?.amount ?? data?.total_amount ?? 0);
 
-    // Items: PayPlus may include them; fall back to single generic line
-    const rawItems = Array.isArray(data?.items) ? data.items : [];
-    const items =
-      rawItems.length > 0
-        ? rawItems.map((i) => ({
-            productId: i.product_uid ?? "",
-            name: i.name ?? "מוצר",
-            price: Number(i.price ?? 0),
-            quantity: Number(i.quantity ?? 1),
-            selectedOptions: {},
-          }))
-        : [
-            {
-              productId: "",
-              name: moreInfo ? `הזמנה ${moreInfo}` : "הזמנה",
-              price: totalPrice,
-              quantity: 1,
+    // ── 4. Update existing order OR create a new one ──────────────────────────
+    let savedOrder = null;
+
+    // If more_info holds a local MongoDB orderId, update that document
+    if (moreInfo) {
+      console.log(`🔍 Looking for existing order with id: ${moreInfo}`);
+      const existingOrder = await OrderMongo.findById(moreInfo).catch(
+        () => null,
+      );
+
+      if (existingOrder) {
+        console.log(`📝 Updating existing order ${existingOrder._id} → Paid`);
+        existingOrder.paymentStatus = "completed";
+        existingOrder.transactionUid = transactionUid;
+        existingOrder.status =
+          existingOrder.status === "pending"
+            ? "processing"
+            : existingOrder.status;
+        savedOrder = await existingOrder.save();
+        console.log(`✅ Order ${savedOrder._id} updated to Paid`);
+      } else {
+        console.warn(
+          `⚠️ No order found for more_info: ${moreInfo} — will create new`,
+        );
+      }
+    }
+
+    // No existing order found (or no more_info) — create from webhook payload
+    if (!savedOrder) {
+      // Idempotency: skip if this transaction was already recorded
+      const duplicate = await OrderMongo.findOne({ transactionUid });
+      if (duplicate) {
+        console.log(
+          `ℹ️ Transaction ${transactionUid} already recorded as order ${duplicate._id} — skipping`,
+        );
+        return res.status(200).send("OK");
+      }
+
+      const rawItems = Array.isArray(data?.items) ? data.items : [];
+      const items =
+        rawItems.length > 0
+          ? rawItems.map((i) => ({
+              productId: i.product_uid ?? "",
+              name: i.name ?? "מוצר",
+              price: Number(i.price ?? 0),
+              quantity: Number(i.quantity ?? 1),
               selectedOptions: {},
-            },
-          ];
+            }))
+          : [
+              {
+                productId: "",
+                name: `הזמנה ${moreInfo ?? transactionUid}`,
+                price: totalPrice,
+                quantity: 1,
+                selectedOptions: {},
+              },
+            ];
 
-    // ── 5. Save order to MongoDB ───────────────────────────────────────────────
-    const savedOrder = await OrderMongo.create({
-      customerName,
-      customerEmail,
-      customerPhone,
-      items,
-      shippingAddress: {
-        fullName: customerName,
-        address: customer?.address ?? "",
-        city: customer?.city ?? "",
-        zipCode: customer?.zip_code ?? "",
-      },
-      itemsPrice: totalPrice,
-      shippingPrice: 0,
-      totalPrice,
-      paymentStatus: "completed",
-      transactionUid,
-      status: "pending",
-    });
+      savedOrder = await OrderMongo.create({
+        customerName,
+        customerEmail,
+        customerPhone,
+        items,
+        shippingAddress: {
+          fullName: customerName,
+          address: customer?.address ?? "",
+          city: customer?.city ?? "",
+          zipCode: customer?.zip_code ?? "",
+        },
+        itemsPrice: totalPrice,
+        shippingPrice: 0,
+        totalPrice,
+        paymentStatus: "completed",
+        transactionUid,
+        status: "pending",
+      });
 
-    console.log(`✅ Order saved from webhook — id: ${savedOrder._id}`);
+      console.log(`✅ New order created from webhook — id: ${savedOrder._id}`);
+    }
 
-    // ── 6. Auto-generate tax receipt (non-blocking) ───────────────────────────
+    // ── 5. Auto-generate tax receipt (non-blocking) ───────────────────────────
     autoGenerateInvoice(savedOrder, transactionUid);
 
-    // ── 7. Send confirmation emails (non-blocking) ────────────────────────────
+    // ── 6. Send confirmation emails (non-blocking) ────────────────────────────
     const emailData = {
       orderNumber: transactionUid,
       items: savedOrder.items,
@@ -761,9 +785,12 @@ export const payPlusWebhook = async (req, res) => {
       sendBusinessOwnerOrderNotification({ ...emailData, userId: "webhook" }),
     ]).catch((err) => console.error("❌ Webhook email error:", err.message));
   } catch (error) {
-    // Never let an internal error affect the 200 already sent
     console.error("❌ Webhook processing error:", error.message);
+    console.error(error.stack);
   }
+
+  // Always return 200 OK so PayPlus knows the webhook was received
+  return res.status(200).send("OK");
 };
 
 // @desc    Generate a PayPlus payment link (with initial_invoice: true)
@@ -778,6 +805,7 @@ export const generatePaymentLinkHandler = async (req, res) => {
       customerName,
       customerEmail,
       customerPhone,
+      orderId,
       moreInfo,
       items,
       successUrl,
@@ -797,7 +825,8 @@ export const generatePaymentLinkHandler = async (req, res) => {
       customerName,
       customerEmail,
       customerPhone,
-      moreInfo,
+      // Prefer orderId so the webhook can match back to the local order
+      moreInfo: orderId ?? moreInfo ?? "",
       items: Array.isArray(items) ? items : [],
       successUrl,
       failureUrl,
