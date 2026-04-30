@@ -784,12 +784,10 @@ export const createDocumentHandler = async (req, res) => {
         .json({ success: false, message: "customer.name הוא שדה חובה" });
     }
     if (!Array.isArray(items) || items.length === 0) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "items הוא שדה חובה ולא יכול להיות ריק",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "items הוא שדה חובה ולא יכול להיות ריק",
+      });
     }
     if (totalAmount == null || isNaN(Number(totalAmount))) {
       return res
@@ -798,11 +796,15 @@ export const createDocumentHandler = async (req, res) => {
     }
 
     // Normalize vatType: accept legacy numbers (0/1) or correct string enums
-    const vatTypeMap = { 0: "vat-type-not-included", 1: "vat-type-included", 2: "vat-type-exempt" };
+    const vatTypeMap = {
+      0: "vat-type-not-included",
+      1: "vat-type-included",
+      2: "vat-type-exempt",
+    };
     const normalizedVatType =
       typeof vatType === "number"
-        ? vatTypeMap[vatType] ?? "vat-type-included"
-        : vatType ?? "vat-type-included";
+        ? (vatTypeMap[vatType] ?? "vat-type-included")
+        : (vatType ?? "vat-type-included");
 
     const result = await createManualDocument(docType, {
       customer,
