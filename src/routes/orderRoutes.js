@@ -6,13 +6,16 @@ import {
   updateOrderStatus,
   deleteOrder,
   orderSuccess,
+  verifyTransaction,
 } from "../controllers/orderController.js";
 import { protect, admin, optionalProtect } from "../middleware/auth.js";
 
 const router = express.Router();
 
+// Verify PayPlus payment server-side and save order — SECURITY: keeps API keys off the frontend
+router.post("/verify-transaction", optionalProtect, verifyTransaction);
+
 // Order success callback — called by frontend after payment gateway confirms payment
-// optionalProtect: links order to user when logged in, works for guests too
 router.post("/success", optionalProtect, orderSuccess);
 
 // Order management endpoints

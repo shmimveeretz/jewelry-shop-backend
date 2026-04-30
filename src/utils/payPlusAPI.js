@@ -324,4 +324,33 @@ export const generatePaymentURL = (transactionData) => {
   return transactionData.url || transactionData.paymentUrl;
 };
 
+/**
+ * Verify a PayPlus payment by payment_page_request_uid (server-side only).
+ * Use this instead of letting the frontend call PayPlus directly.
+ *
+ * @param {string} paymentPageRequestUid
+ * @returns {Promise<Object>} PayPlus transaction data
+ */
+export const getTransactionByPageRequestUid = async (paymentPageRequestUid) => {
+  try {
+    const response = await payPlusAPI.post(
+      "/transaction/transactionDataByPaymentPageRequestUid",
+      { payment_page_request_uid: paymentPageRequestUid },
+    );
+    return response.data;
+  } catch (error) {
+    const detail = error.response?.data ?? error.message;
+    console.error(
+      "❌ getTransactionByPageRequestUid error:",
+      JSON.stringify(detail),
+    );
+    throw new Error(
+      error.response?.data?.results?.message ||
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to verify transaction with PayPlus",
+    );
+  }
+};
+
 export default payPlusAPI;

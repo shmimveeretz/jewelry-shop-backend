@@ -1,6 +1,10 @@
 import Order from "../models/Order.js";
 import OrderMongo from "../models/OrderMongo.js";
 import UserMongo from "../models/UserMongo.js";
+import {
+  getTransactionByPageRequestUid,
+  createManualDocument,
+} from "../utils/payPlusAPI.js";
 
 // @desc    Get all orders
 // @route   GET /api/orders
@@ -331,5 +335,165 @@ export const deleteOrder = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+// @desc    Verify a PayPlus payment server-side and save the order
+// @route   POST /api/orders/verify-transaction
+// @access  Public (optionalProtect — supports guests)
+export const verifyTransaction = async (req, res) => {
+  try {
+    const { paymentPageRequestUid, orderData: orderDataFromBody } = req.body;
+
+    if (!paymentPageRequestUid) {
+      return res.status(400).json({
+        success: false,
+        message: "paymentPageRequestUid הוא שדה חובה",
+      });
+    }
+
+    // Idempotency — avoid saving the same transaction twice
+    const existing = await OrderMongo.findOne({
+      transactionUid: paymentPageRequestUid,
+    });
+    if (existing) {
+      return res.json({
+        success: true,
+        data: existing,
+        message: "הזמנה כבר קיימת במערכת",
+      });
+    }
+
+    // Verify the payment server-side with PayPlus
+    console.log("🔍 Verifying transaction:", paymentPageRequestUid);
+    const payPlusResponse = await getTransactionByPageRequestUid(
+      paymentPageRequestUid,
+    );
+
+    // PayPlus returns results.status 1 for approved transactions
+    const txStatus =
+      payPlusResponse?.results?.status ?? payPlusResponse?.data?.status ?? null;
+    const isApproved =
+      txStatus === 1 ||
+      txStatus === "1" ||
+      txStatus === "approved" ||
+      payPlusResponse?.data?.payment_status === "completed";
+
+    if (!isApproved) {
+      console.warn("⚠️ PayPlus transaction not approved:", payPlusResponse);
+      return res.status(402).json({
+        success: false,
+        message: "התשלום לא אושר על ידי PayPlus",
+        details: payPlusResponse?.results ?? payPlusResponse,
+      });
+    }
+
+    // Build order from PayPlus data + optional orderData from frontend
+    const txData = payPlusResponse?.data ?? {};
+    const orderData = orderDataFromBody ?? {};
+
+    const customerName =
+      orderData.customerName ||
+      txData.customer_name ||
+      txData.full_name ||
+      "לקוח";
+    const customerEmail =
+      orderData.customerEmail || txData.email || txData.customer_email || "";
+    const customerPhone =
+      orderData.customerPhone || txData.phone || txData.customer_phone || "";
+    const totalPrice =
+      orderData.totalPrice ??
+      orderData.totalAmount ??
+      Number(txData.amount) ??
+      0;
+
+    const items =
+      orderData.items ??
+      (txData.items || []).map((i) => ({
+        productId: i.product_uid || "",
+        name: i.name,
+        price: Number(i.price),
+        quantity: Number(i.quantity) || 1,
+        selectedOptions: {},
+      }));
+
+    const newOrder = await OrderMongo.create({
+      customerName,
+      customerEmail,
+      customerPhone,
+      items,
+      shippingAddress: {
+        fullName:
+          orderData.shippingAddress?.fullName ||
+          orderData.shippingAddress?.name ||
+          customerName,
+        address:
+          orderData.shippingAddress?.address ||
+          orderData.shippingAddress?.street ||
+          "",
+        city: orderData.shippingAddress?.city || "",
+        zipCode: orderData.shippingAddress?.zipCode || "",
+      },
+      itemsPrice: Number(orderData.itemsPrice) || 0,
+      shippingPrice: Number(orderData.shippingPrice) || 0,
+      totalPrice: Number(totalPrice),
+      couponCode: orderData.couponCode || null,
+      discountPercent: Number(orderData.discountPercent) || 0,
+      paymentStatus: "completed",
+      transactionUid: paymentPageRequestUid,
+      status: "pending",
+      ...(req.user?.id && { userId: req.user.id }),
+    });
+
+    // Link order to authenticated user
+    if (req.user?.id) {
+      await UserMongo.findByIdAndUpdate(req.user.id, {
+        $push: { orders: newOrder._id },
+        updatedAt: Date.now(),
+      });
+    }
+
+    // Auto-generate tax receipt via PayPlus Books (non-blocking)
+    if (items.length > 0 && totalPrice > 0) {
+      const today = new Date().toISOString().slice(0, 10);
+      createManualDocument("inv_tax_receipt", {
+        customer: {
+          name: customerName,
+          email: customerEmail,
+          phone: customerPhone,
+        },
+        items: items.map((i) => ({
+          name: i.name,
+          quantity: i.quantity ?? 1,
+          price: i.price,
+        })),
+        payments: [{ paymentMethod: 4, sum: Number(totalPrice) }],
+        totalAmount: Number(totalPrice),
+        currency_code: "ILS",
+        vatType: "Vat-type-included",
+        language: "He",
+        doc_date: today,
+        transactionUid: paymentPageRequestUid,
+        sendEmail: !!customerEmail,
+      }).catch((err) =>
+        console.error(
+          "❌ Auto-invoice error (verifyTransaction):",
+          err.message,
+        ),
+      );
+    }
+
+    console.log(
+      `✅ Transaction verified & order saved — id: ${newOrder._id}, uid: ${paymentPageRequestUid}`,
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "התשלום אומת וההזמנה נשמרה בהצלחה",
+      data: newOrder,
+    });
+  } catch (error) {
+    console.error("❌ verifyTransaction Error:", error.message);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
