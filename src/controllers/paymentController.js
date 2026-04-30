@@ -136,7 +136,7 @@ export const createPaymentIntent = async (req, res) => {
       currency_code: currency,
       sendEmailApproval: true,
       sendEmailFailure: false,
-      refURL_callback: `${process.env.BACKEND_URL || "http://localhost:5000"}/apiwebhook`,
+      refURL_callback: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/payment/webhook`,
       initial_invoice: true,
       hide_identification_id: false,
       more_info: orderId, // Send order ID in more_info
