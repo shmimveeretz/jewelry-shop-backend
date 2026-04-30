@@ -616,99 +616,153 @@ export const debugOrder = async (req, res) => {
 // @route   POST /apiwebhook
 // @access  Public
 export const payPlusWebhook = async (req, res) => {
+  // Always respond 200 immediately so PayPlus doesn't retry
+  res.status(200).json({ received: true });
+
   try {
-    const { eventType, data } = req.body;
+    console.log("🔔 PayPlus Webhook received:");
+    console.log(JSON.stringify(req.body, null, 2));
 
-    // Verify webhook signature
-    if (!data || !data.transactionId) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid webhook data",
-      });
+    const payload = req.body;
+
+    // ── 1. Extract transaction identifiers ────────────────────────────────────
+    // PayPlus S2S callback fields (may be nested under data or at root level)
+    const data = payload?.data ?? payload;
+
+    const transactionUid =
+      data?.transaction_uid ??
+      data?.transactionUid ??
+      payload?.transaction_uid ??
+      null;
+
+    const statusCode =
+      data?.status_code ??
+      data?.status ??
+      payload?.status_code ??
+      payload?.status ??
+      null;
+
+    const moreInfo = data?.more_info ?? payload?.more_info ?? null;
+
+    console.log("📌 transaction_uid:", transactionUid);
+    console.log("📌 status_code:", statusCode);
+    console.log("📌 more_info:", moreInfo);
+
+    // ── 2. Validate that the transaction is approved ──────────────────────────
+    // PayPlus uses status_code 1 or status "approved" for successful payments
+    const isApproved =
+      statusCode === 1 ||
+      statusCode === "1" ||
+      String(statusCode).toLowerCase() === "approved" ||
+      data?.transaction_status === "approved" ||
+      payload?.transaction_status === "approved";
+
+    if (!isApproved) {
+      console.warn(
+        `⚠️ Webhook ignored — transaction not approved. status_code: ${statusCode}`,
+      );
+      return;
     }
 
-    // Handle different event types
-    switch (eventType) {
-      case "transaction.approved":
-        console.log("✅ PayPlus Payment Approved:", data.transactionId);
-        // Update order status to 'paid'
-        if (data.orderId) {
-          await Order.updatePaymentStatus(
-            data.orderId,
-            "completed",
-            data.transactionId,
-          );
-
-          // Send order confirmation emails after payment approval
-          try {
-            const order = await Order.findById(data.orderId);
-            if (order) {
-              const User = (await import("../models/User.js")).default;
-              const user = await User.findById(order.userId || order.user);
-
-              const orderEmailData = {
-                orderNumber: order.orderNumber,
-                items: order.items,
-                shippingAddress: order.shippingAddress,
-                itemsPrice: order.itemsPrice,
-                taxPrice: order.taxPrice,
-                shippingPrice: order.shippingPrice,
-                totalPrice: order.totalPrice,
-                paymentInfo: order.paymentInfo,
-                createdAt: order.createdAt,
-                userId: order.userId || order.user,
-                customerEmail: user?.email,
-              };
-
-              // Send invoice to customer
-              if (user?.email) {
-                await sendCustomerOrderInvoice(user.email, orderEmailData);
-                console.log(`✅ חשבונית נשלחה ללקוח: ${user.email}`);
-              }
-
-              // Send notification to business owner
-              await sendBusinessOwnerOrderNotification(orderEmailData);
-              console.log(`✅ התראה נשלחה לבעל העסק`);
-            }
-          } catch (emailError) {
-            console.error("❌ שגיאה בשליחת מיילים:", emailError.message);
-          }
-        }
-        break;
-
-      case "transaction.declined":
-        console.log("❌ PayPlus Payment Declined:", data.transactionId);
-        if (data.orderId) {
-          await Order.updatePaymentStatus(
-            data.orderId,
-            "failed",
-            data.transactionId,
-          );
-        }
-        break;
-
-      case "transaction.pending":
-        console.log("⏳ PayPlus Payment Pending:", data.transactionId);
-        if (data.orderId) {
-          await Order.updatePaymentStatus(
-            data.orderId,
-            "pending",
-            data.transactionId,
-          );
-        }
-        break;
-
-      default:
-        console.log(`Unhandled PayPlus event type: ${eventType}`);
+    if (!transactionUid) {
+      console.error("❌ Webhook missing transaction_uid — cannot save order");
+      return;
     }
 
-    res.json({ success: true, received: true });
-  } catch (error) {
-    console.error("Webhook Error:", error.message);
-    res.status(400).json({
-      success: false,
-      message: error.message,
+    // ── 3. Idempotency — skip if already saved ────────────────────────────────
+    const existing = await OrderMongo.findOne({ transactionUid });
+    if (existing) {
+      console.log(
+        `ℹ️ Order for transaction ${transactionUid} already saved — skipping`,
+      );
+      return;
+    }
+
+    // ── 4. Build order from webhook payload ───────────────────────────────────
+    const customer = data?.customer ?? {};
+    const customerName =
+      customer?.customer_name ??
+      customer?.name ??
+      data?.full_name ??
+      moreInfo ??
+      "לקוח";
+    const customerEmail = customer?.email ?? data?.email ?? "";
+    const customerPhone = customer?.phone ?? data?.phone ?? "";
+    const totalPrice = Number(data?.amount ?? data?.total_amount ?? 0);
+
+    // Items: PayPlus may include them; fall back to single generic line
+    const rawItems = Array.isArray(data?.items) ? data.items : [];
+    const items =
+      rawItems.length > 0
+        ? rawItems.map((i) => ({
+            productId: i.product_uid ?? "",
+            name: i.name ?? "מוצר",
+            price: Number(i.price ?? 0),
+            quantity: Number(i.quantity ?? 1),
+            selectedOptions: {},
+          }))
+        : [
+            {
+              productId: "",
+              name: moreInfo ? `הזמנה ${moreInfo}` : "הזמנה",
+              price: totalPrice,
+              quantity: 1,
+              selectedOptions: {},
+            },
+          ];
+
+    // ── 5. Save order to MongoDB ───────────────────────────────────────────────
+    const savedOrder = await OrderMongo.create({
+      customerName,
+      customerEmail,
+      customerPhone,
+      items,
+      shippingAddress: {
+        fullName: customerName,
+        address: customer?.address ?? "",
+        city: customer?.city ?? "",
+        zipCode: customer?.zip_code ?? "",
+      },
+      itemsPrice: totalPrice,
+      shippingPrice: 0,
+      totalPrice,
+      paymentStatus: "completed",
+      transactionUid,
+      status: "pending",
     });
+
+    console.log(`✅ Order saved from webhook — id: ${savedOrder._id}`);
+
+    // ── 6. Auto-generate tax receipt (non-blocking) ───────────────────────────
+    autoGenerateInvoice(savedOrder, transactionUid);
+
+    // ── 7. Send confirmation emails (non-blocking) ────────────────────────────
+    const emailData = {
+      orderNumber: transactionUid,
+      items: savedOrder.items,
+      shippingAddress: savedOrder.shippingAddress,
+      itemsPrice: savedOrder.itemsPrice,
+      taxPrice: 0,
+      shippingPrice: 0,
+      totalPrice: savedOrder.totalPrice,
+      paymentInfo: {
+        method: "credit_card",
+        status: "completed",
+        transactionId: transactionUid,
+      },
+      createdAt: savedOrder.createdAt,
+      customerEmail,
+    };
+
+    Promise.all([
+      customerEmail
+        ? sendCustomerOrderInvoice(customerEmail, emailData)
+        : Promise.resolve(),
+      sendBusinessOwnerOrderNotification({ ...emailData, userId: "webhook" }),
+    ]).catch((err) => console.error("❌ Webhook email error:", err.message));
+  } catch (error) {
+    // Never let an internal error affect the 200 already sent
+    console.error("❌ Webhook processing error:", error.message);
   }
 };
 
