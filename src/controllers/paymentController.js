@@ -833,14 +833,17 @@ export const generatePaymentLinkHandler = async (req, res) => {
       notifyUrl: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/payment/webhook`,
     });
 
-    res.json({
+    return res.status(200).json({
       success: true,
-      paymentPageUrl: result.paymentPageUrl,
+      payment_page_link: result.paymentPageUrl,
+      paymentPageUrl: result.paymentPageUrl,   // keep old field for backward-compat
       pageRequestUid: result.pageRequestUid,
     });
   } catch (error) {
     console.error("❌ generatePaymentLinkHandler:", error.message);
-    res.status(500).json({ success: false, message: error.message });
+    return res
+      .status(500)
+      .json({ success: false, error: "Failed to create payment page", message: error.message });
   }
 };
 
