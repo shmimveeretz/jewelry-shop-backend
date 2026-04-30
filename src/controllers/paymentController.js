@@ -836,14 +836,18 @@ export const generatePaymentLinkHandler = async (req, res) => {
     return res.status(200).json({
       success: true,
       payment_page_link: result.paymentPageUrl,
-      paymentPageUrl: result.paymentPageUrl,   // keep old field for backward-compat
+      paymentPageUrl: result.paymentPageUrl, // keep old field for backward-compat
       pageRequestUid: result.pageRequestUid,
     });
   } catch (error) {
     console.error("❌ generatePaymentLinkHandler:", error.message);
     return res
       .status(500)
-      .json({ success: false, error: "Failed to create payment page", message: error.message });
+      .json({
+        success: false,
+        error: "Failed to create payment page",
+        message: error.message,
+      });
   }
 };
 
