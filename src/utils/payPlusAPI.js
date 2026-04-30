@@ -51,6 +51,7 @@ export const createPayPlusTransaction = async (paymentData) => {
  * @param {string}   [options.customerEmail]   - Customer email (for invoice)
  * @param {string}   [options.customerPhone]   - Customer phone
  * @param {string}   [options.moreInfo]        - Internal reference (order ID, etc.)
+ * @param {Array}    [options.items]           - Line items for invoice [{name, quantity, price}]
  * @param {string}   [options.successUrl]      - Redirect on success
  * @param {string}   [options.failureUrl]      - Redirect on failure
  * @param {string}   [options.notifyUrl]       - Webhook callback URL
@@ -64,6 +65,7 @@ export const generatePaymentLink = async ({
   customerEmail = "",
   customerPhone = "",
   moreInfo = "",
+  items = [],
   successUrl,
   failureUrl,
   notifyUrl,
@@ -76,7 +78,11 @@ export const generatePaymentLink = async ({
       currency_code,
       sendEmailApproval: true,
       sendEmailFailure: false,
-      initial_invoice: true, // Triggers retro-document generation by PayPlus
+      // Triggers automatic invoice generation by PayPlus (requires invoice company
+      // to be integrated and activated in payment page settings)
+      initial_invoice: true,
+      // Ensure VAT is included in the invoice
+      paying_vat: true,
       more_info: moreInfo,
       ...(description && { description }),
       ...(successUrl && { refURL_success: successUrl }),
@@ -87,6 +93,14 @@ export const generatePaymentLink = async ({
         email: customerEmail,
         phone: customerPhone,
       },
+      // Line items on invoice (name only required; product_uid optional for catalog products)
+      ...(items.length > 0 && {
+        items: items.map((item) => ({
+          name: item.name,
+          quantity: item.quantity ?? 1,
+          price: item.price,
+        })),
+      }),
     };
 
     console.log("📤 generatePaymentLink →", JSON.stringify(payload, null, 2));
@@ -131,19 +145,25 @@ export const generatePaymentLink = async ({
 /**
  * Create a fiscal document manually via PayPlus Books API.
  *
- * @param {string} docType  - Document type key:
- *   "inv_tax_receipt" | "inv_proforma" | "inv_receipt" | "inv_tax" |
- *   "inv_order"       | "inv_refund"   | "inv_delivery"
+ * @param {string} docType  - Document type key (per PayPlus docs):
+ *   "inv_tax_receipt" | "inv_tax" | "inv_receipt" | "inv_proforma" |
+ *   "inv_refund"      | "inv_don_receipt" | "inv_pay_request" |
+ *   "crt_delivery"    | "crt_return" | "order_purchase" |
+ *   "certificatepurchase" | "dc_quote"
  *
  * @param {Object} options
  * @param {Object}   options.customer              - { name, email, phone?, address? }
- * @param {Array}    options.items                 - [{ name, quantity, price, vatType? }]
+ * @param {Array}    options.items                 - [{ name, quantity, price }]
  * @param {Array}    [options.payments]            - [{ paymentMethod, sum }]
  *   paymentMethod: 1=cash 2=check 3=bank-transfer 4=credit-card 5=other
  * @param {number}   options.totalAmount           - Grand total (including VAT)
  * @param {string}   [options.currency_code]       - Default "ILS"
- * @param {number}   [options.vatType]             - 0=no VAT, 1=incl. VAT (default 1)
- * @param {string}   [options.remarks]             - Optional free-text remarks
+ * @param {string}   [options.vatType]             - "vat-type-included" | "vat-type-not-included" | "vat-type-exempt"
+ * @param {string}   [options.remarks]             - Optional free-text remarks (more_info)
+ * @param {boolean}  [options.sendEmail]           - Email the document to customer (default true)
+ * @param {string}   [options.transactionUid]      - Link to an existing PayPlus transaction UUID
+ * @param {string}   [options.language]            - Document language: "He" (default) | "En"
+ * @param {string}   [options.doc_date]            - Document date YYYY-MM-DD (defaults to today)
  * @returns {Promise<Object>} PayPlus Books API response
  */
 export const createManualDocument = async (
@@ -154,23 +174,44 @@ export const createManualDocument = async (
     payments = [],
     totalAmount,
     currency_code = "ILS",
-    vatType = 1,
+    vatType = "vat-type-included",
     remarks = "",
+    sendEmail = true,
+    transactionUid = null,
+    language = "He",
+    doc_date = null,
   },
 ) => {
   const VALID_DOC_TYPES = [
     "inv_tax_receipt",
-    "inv_proforma",
-    "inv_receipt",
     "inv_tax",
-    "inv_order",
+    "inv_receipt",
+    "inv_proforma",
     "inv_refund",
-    "inv_delivery",
+    "inv_don_receipt",
+    "inv_pay_request",
+    "crt_delivery",
+    "crt_return",
+    "order_purchase",
+    "certificatepurchase",
+    "dc_quote",
+  ];
+
+  const VALID_VAT_TYPES = [
+    "vat-type-included",
+    "vat-type-not-included",
+    "vat-type-exempt",
   ];
 
   if (!VALID_DOC_TYPES.includes(docType)) {
     throw new Error(
       `Invalid docType "${docType}". Valid options: ${VALID_DOC_TYPES.join(", ")}`,
+    );
+  }
+
+  if (!VALID_VAT_TYPES.includes(vatType)) {
+    throw new Error(
+      `Invalid vatType "${vatType}". Valid options: ${VALID_VAT_TYPES.join(", ")}`,
     );
   }
 
@@ -190,14 +231,17 @@ export const createManualDocument = async (
       name: item.name,
       quantity: item.quantity ?? 1,
       price: item.price,
-      vatType: item.vatType ?? vatType,
     })),
     payments:
       payments.length > 0 ? payments : [{ paymentMethod: 4, sum: totalAmount }], // default: credit card
     totalAmount,
     currency_code,
     vatType,
-    ...(remarks && { remarks }),
+    language,
+    send_document_email: sendEmail,
+    ...(transactionUid && { Transaction_uuid: transactionUid }),
+    ...(doc_date && { doc_date }),
+    ...(remarks && { more_info: remarks }),
   };
 
   console.log(

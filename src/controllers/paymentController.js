@@ -12,6 +12,33 @@ import {
   createManualDocument,
 } from "../utils/payPlusAPI.js";
 
+// Helper: auto-generate a tax receipt after a verified payment (non-blocking)
+const autoGenerateInvoice = (order, transactionUid) => {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  createManualDocument("inv_tax_receipt", {
+    customer: {
+      name: order.customerName,
+      email: order.customerEmail || order.email || "",
+      phone: order.customerPhone || "",
+    },
+    items: (order.items || []).map((item) => ({
+      name: item.name,
+      quantity: item.quantity ?? 1,
+      price: item.price,
+    })),
+    payments: [{ paymentMethod: 4, sum: order.totalPrice }],
+    totalAmount: order.totalPrice,
+    currency_code: "ILS",
+    vatType: "vat-type-included",
+    language: "He",
+    doc_date: today,
+    transactionUid,
+    sendEmail: true,
+  }).catch((err) =>
+    console.error("❌ Auto-invoice generation error:", err.message),
+  );
+};
+
 // @desc    Verify PayPlus payment and save order to DB
 // @route   GET /api/payment/verify/:transactionUid
 // @access  Public
@@ -54,6 +81,9 @@ export const verifyPayment = async (req, res) => {
 
     // Create the order
     const order = await Order.createFromPayment(orderData, transactionUid);
+
+    // Auto-generate tax receipt via PayPlus Books (non-blocking)
+    autoGenerateInvoice(order, transactionUid);
 
     // Send confirmation emails (non-blocking)
     const emailData = {
@@ -695,6 +725,7 @@ export const generatePaymentLinkHandler = async (req, res) => {
       customerEmail,
       customerPhone,
       moreInfo,
+      items,
       successUrl,
       failureUrl,
     } = req.body;
@@ -713,6 +744,7 @@ export const generatePaymentLinkHandler = async (req, res) => {
       customerEmail,
       customerPhone,
       moreInfo,
+      items: Array.isArray(items) ? items : [],
       successUrl,
       failureUrl,
       notifyUrl: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/payment/webhook`,
@@ -743,6 +775,7 @@ export const createDocumentHandler = async (req, res) => {
       currency_code,
       vatType,
       remarks,
+      sendEmail,
     } = req.body;
 
     if (!customer?.name) {
@@ -764,20 +797,32 @@ export const createDocumentHandler = async (req, res) => {
         .json({ success: false, message: "totalAmount הוא שדה חובה" });
     }
 
+    // Normalize vatType: accept legacy numbers (0/1) or correct string enums
+    const vatTypeMap = { 0: "vat-type-not-included", 1: "vat-type-included", 2: "vat-type-exempt" };
+    const normalizedVatType =
+      typeof vatType === "number"
+        ? vatTypeMap[vatType] ?? "vat-type-included"
+        : vatType ?? "vat-type-included";
+
     const result = await createManualDocument(docType, {
       customer,
       items,
       payments,
       totalAmount: Number(totalAmount),
       currency_code,
-      vatType,
+      vatType: normalizedVatType,
       remarks,
+      sendEmail: sendEmail !== false, // default true
     });
 
     res.status(201).json({ success: true, data: result });
   } catch (error) {
     console.error("❌ createDocumentHandler:", error.message);
-    const status = error.message.startsWith("Invalid docType") ? 400 : 500;
+    const status =
+      error.message.startsWith("Invalid docType") ||
+      error.message.startsWith("Invalid vatType")
+        ? 400
+        : 500;
     res.status(status).json({ success: false, message: error.message });
   }
 };
