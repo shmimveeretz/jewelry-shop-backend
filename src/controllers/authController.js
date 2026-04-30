@@ -40,7 +40,7 @@ export const register = async (req, res) => {
   try {
     const firstName = req.body.firstName || req.body.firstname;
     const lastName = req.body.lastName || req.body.lastname;
-    const { email, password, phone } = req.body;
+    const { email, password, phone, isSubscribedToNewsletter } = req.body;
 
     // Validate required fields
     if (!firstName || !lastName || !email || !password || !phone) {
@@ -57,6 +57,7 @@ export const register = async (req, res) => {
       email,
       password,
       phone,
+      isSubscribedToNewsletter: isSubscribedToNewsletter !== false,
     });
 
     // Generate token

@@ -23,8 +23,15 @@ router.get("/verify/:transactionUid", verifyPayment);
 // PayPlus enhanced payment link (includes initial_invoice: true)
 router.post("/generate-link", generatePaymentLinkHandler);
 
-// PayPlus Books — create fiscal document (admin only)
+// PayPlus Books — create fiscal document by docType in path param (admin only)
 router.post("/documents/:docType", protect, admin, createDocumentHandler);
+
+// PayPlus Books — create fiscal document with docType in request body (admin only)
+// Alias used by the admin panel at /api/payplus/create-document
+router.post("/create-document", protect, admin, async (req, res) => {
+  req.params.docType = req.body.docType || "inv_tax_receipt";
+  return createDocumentHandler(req, res);
+});
 
 // Demo/Test routes (public for easy testing)
 router.post("/test-order", testOrderDemo);

@@ -32,6 +32,16 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    orders: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Order",
+      },
+    ],
+    isSubscribedToNewsletter: {
+      type: Boolean,
+      default: true,
+    },
     verificationCode: {
       type: String,
     },

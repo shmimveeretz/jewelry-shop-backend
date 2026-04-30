@@ -29,7 +29,7 @@ const autoGenerateInvoice = (order, transactionUid) => {
     payments: [{ paymentMethod: 4, sum: order.totalPrice }],
     totalAmount: order.totalPrice,
     currency_code: "ILS",
-    vatType: "vat-type-included",
+    vatType: "Vat-type-included",
     language: "He",
     doc_date: today,
     transactionUid,
@@ -797,14 +797,14 @@ export const createDocumentHandler = async (req, res) => {
 
     // Normalize vatType: accept legacy numbers (0/1) or correct string enums
     const vatTypeMap = {
-      0: "vat-type-not-included",
-      1: "vat-type-included",
-      2: "vat-type-exempt",
+      0: "Vat-type-not-included",
+      1: "Vat-type-included",
+      2: "Vat-type-exempt",
     };
     const normalizedVatType =
       typeof vatType === "number"
-        ? (vatTypeMap[vatType] ?? "vat-type-included")
-        : (vatType ?? "vat-type-included");
+        ? (vatTypeMap[vatType] ?? "Vat-type-included")
+        : (vatType ?? "Vat-type-included");
 
     const result = await createManualDocument(docType, {
       customer,

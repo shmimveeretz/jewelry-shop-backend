@@ -24,7 +24,14 @@ class UserModel {
 
   async create(userData) {
     try {
-      const { firstName, lastName, email, password, phone } = userData;
+      const {
+        firstName,
+        lastName,
+        email,
+        password,
+        phone,
+        isSubscribedToNewsletter,
+      } = userData;
 
       // Validate required fields
       if (!firstName || !lastName) {
@@ -61,6 +68,7 @@ class UserModel {
         cart: [],
         wishlist: [],
         orders: [],
+        isSubscribedToNewsletter: isSubscribedToNewsletter !== false, // default true
       });
 
       return {
@@ -71,6 +79,7 @@ class UserModel {
         phone: newUser.phone,
         role: newUser.role,
         blocked: newUser.blocked,
+        isSubscribedToNewsletter: newUser.isSubscribedToNewsletter,
         cart: newUser.cart,
         wishlist: newUser.wishlist,
         orders: newUser.orders,

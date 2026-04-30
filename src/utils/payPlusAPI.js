@@ -11,6 +11,7 @@ const payPlusAPI = axios.create({
 });
 
 // Set Authorization at request time (after dotenv.config() has run)
+// PayPlus requires the exact key names "API Key" and "Secret Key" in the JSON object.
 payPlusAPI.interceptors.request.use((config) => {
   config.headers.Authorization = JSON.stringify({
     api_key: process.env.PAYPLUS_PUBLIC_KEY,
@@ -174,7 +175,7 @@ export const createManualDocument = async (
     payments = [],
     totalAmount,
     currency_code = "ILS",
-    vatType = "vat-type-included",
+    vatType = "Vat-type-included",
     remarks = "",
     sendEmail = true,
     transactionUid = null,
@@ -198,9 +199,9 @@ export const createManualDocument = async (
   ];
 
   const VALID_VAT_TYPES = [
-    "vat-type-included",
-    "vat-type-not-included",
-    "vat-type-exempt",
+    "Vat-type-included",
+    "Vat-type-not-included",
+    "Vat-type-exempt",
   ];
 
   if (!VALID_DOC_TYPES.includes(docType)) {
@@ -220,7 +221,10 @@ export const createManualDocument = async (
     throw new Error("items array is required and must not be empty");
   if (totalAmount == null) throw new Error("totalAmount is required");
 
+  const today = new Date().toISOString().slice(0, 10);
+
   const payload = {
+    doc_date: doc_date || today,
     customer: {
       name: customer.name,
       email: customer.email || "",
@@ -240,7 +244,6 @@ export const createManualDocument = async (
     language,
     send_document_email: sendEmail,
     ...(transactionUid && { Transaction_uuid: transactionUid }),
-    ...(doc_date && { doc_date }),
     ...(remarks && { more_info: remarks }),
   };
 

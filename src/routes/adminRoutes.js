@@ -2,6 +2,8 @@ import express from "express";
 import { protect } from "../middleware/auth.js";
 import Device from "../models/Device.js";
 import Order from "../models/Order.js";
+import OrderMongo from "../models/OrderMongo.js";
+import NewsletterMongo from "../models/NewsletterMongo.js";
 import { createManualDocument } from "../utils/payPlusAPI.js";
 
 const router = express.Router();
@@ -258,6 +260,71 @@ router.delete("/devices/:id", protect, checkAdminOrROI, async (req, res) => {
   }
 });
 
+// ─── Stats ───────────────────────────────────────────────────────────────────
+
+// @desc    Get dashboard statistics
+// @route   GET /api/admin/stats?period=week|month|year|all
+// @access  Private/Admin/ROI
+router.get("/stats", protect, checkAdminOrROI, async (req, res) => {
+  try {
+    const { period = "month" } = req.query;
+
+    const now = new Date();
+    let since;
+    switch (period) {
+      case "week":
+        since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case "month":
+        since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case "year":
+        since = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        since = null; // all time
+    }
+
+    const dateFilter = since ? { createdAt: { $gte: since } } : {};
+
+    const [allOrders, periodOrders, newsletterCount] = await Promise.all([
+      OrderMongo.find({}).select("totalPrice status createdAt"),
+      OrderMongo.find(dateFilter).select("totalPrice status createdAt"),
+      NewsletterMongo.countDocuments(),
+    ]);
+
+    const totalRevenue = allOrders.reduce(
+      (sum, o) => sum + (o.totalPrice || 0),
+      0,
+    );
+    const periodRevenue = periodOrders.reduce(
+      (sum, o) => sum + (o.totalPrice || 0),
+      0,
+    );
+
+    const statusCounts = {};
+    for (const o of allOrders) {
+      statusCounts[o.status] = (statusCounts[o.status] || 0) + 1;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        period,
+        totalOrders: allOrders.length,
+        periodOrders: periodOrders.length,
+        totalRevenue: Math.round(totalRevenue * 100) / 100,
+        periodRevenue: Math.round(periodRevenue * 100) / 100,
+        ordersByStatus: statusCounts,
+        newsletterSubscribers: newsletterCount,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Error fetching stats:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ─── Orders ──────────────────────────────────────────────────────────────────
 
 // @desc    Get all orders (with optional status filter)
@@ -387,7 +454,7 @@ router.post(
         payments: [{ paymentMethod: 4, sum: order.totalPrice }], // 4 = credit card
         totalAmount: order.totalPrice,
         currency_code: "ILS",
-        vatType: "vat-type-included",
+        vatType: "Vat-type-included",
         language: "He",
         doc_date: new Date().toISOString().slice(0, 10),
         transactionUid: order.transactionUid || undefined,
