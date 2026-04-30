@@ -8,9 +8,13 @@ import {
   orderSuccess,
   verifyTransaction,
 } from "../controllers/orderController.js";
+import { generatePaymentLinkHandler } from "../controllers/paymentController.js";
 import { protect, admin, optionalProtect } from "../middleware/auth.js";
 
 const router = express.Router();
+
+// Generate a PayPlus payment link — called by frontend before redirecting to payment page
+router.post("/create-payment", optionalProtect, generatePaymentLinkHandler);
 
 // Verify PayPlus payment server-side and save order — SECURITY: keeps API keys off the frontend
 router.post("/verify-transaction", optionalProtect, verifyTransaction);
