@@ -135,7 +135,7 @@ export const createPaymentIntent = async (req, res) => {
     if (!customerEmail) {
       return res.status(400).json({
         success: false,
-        message: "customerEmail is required to generate an invoice",
+        message: "Customer email is strictly required to generate an invoice.",
       });
     }
 
@@ -156,7 +156,7 @@ export const createPaymentIntent = async (req, res) => {
       hide_identification_id: false,
       more_info: orderId, // Send order ID in more_info
       customer: {
-        customer_name: customerName || "",
+        customer_name: customerName || "Guest",
         email: customerEmail,
         ...(customerPhone && { phone: customerPhone }),
       },
