@@ -125,6 +125,7 @@ export const createPaymentIntent = async (req, res) => {
     const {
       amount,
       currency = "ILS",
+      items,
       orderItems = [],
       customerName,
       customerEmail,
@@ -143,6 +144,25 @@ export const createPaymentIntent = async (req, res) => {
     const userId = req.user?.id || `guest_${Date.now()}`;
     const orderId = `order_${Date.now()}_${userId}`;
 
+    // Format items for PayPlus invoice line items
+    const sourceItems = items && items.length > 0 ? items : orderItems;
+    const formattedItems =
+      sourceItems && sourceItems.length > 0
+        ? sourceItems.map((item) => ({
+            name: item.name || "Jewelry",
+            quantity: item.quantity || 1,
+            price: item.price,
+            currency_code: currency,
+          }))
+        : [
+            {
+              name: "General Product",
+              quantity: 1,
+              price: Math.round(amount * 100) / 100,
+              currency_code: currency,
+            },
+          ];
+
     // Format payload according to PayPlus API spec
     const paymentPayload = {
       payment_page_uid: process.env.PAYPLUS_MERCHANT_ID || "shmimveeretz.com", // Your payment page UID
@@ -160,6 +180,7 @@ export const createPaymentIntent = async (req, res) => {
         email: customerEmail,
         ...(customerPhone && { phone: customerPhone }),
       },
+      items: formattedItems,
     };
 
     console.log(
