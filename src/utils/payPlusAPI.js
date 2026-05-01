@@ -75,14 +75,11 @@ export const generatePaymentLink = async ({
     const payload = {
       payment_page_uid: process.env.PAYPLUS_PAYMENT_PAGE_UID,
       charge_method: 1, // 1 = charge only
-      amount,
+      amount_pay: amount,
       currency_code,
       sendEmailApproval: true,
       sendEmailFailure: false,
-      // Triggers automatic invoice generation by PayPlus (requires invoice company
-      // to be integrated and activated in payment page settings)
       initial_invoice: true,
-      // Ensure VAT is included in the invoice
       paying_vat: true,
       more_info: moreInfo,
       ...(description && { description }),
@@ -94,14 +91,6 @@ export const generatePaymentLink = async ({
         email: customerEmail,
         phone: customerPhone,
       },
-      // Line items on invoice (name only required; product_uid optional for catalog products)
-      ...(items.length > 0 && {
-        items: items.map((item) => ({
-          name: item.name,
-          quantity: item.quantity ?? 1,
-          price: item.price,
-        })),
-      }),
     };
 
     console.log("📤 generatePaymentLink →", JSON.stringify(payload, null, 2));
