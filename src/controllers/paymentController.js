@@ -122,7 +122,22 @@ export const verifyPayment = async (req, res) => {
 // @access  Private
 export const createPaymentIntent = async (req, res) => {
   try {
-    const { amount, currency = "ILS", orderItems = [] } = req.body;
+    const {
+      amount,
+      currency = "ILS",
+      orderItems = [],
+      customerName,
+      customerEmail,
+      customerPhone,
+    } = req.body;
+
+    // Validate required customer fields before hitting PayPlus
+    if (!customerEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "customerEmail is required to generate an invoice",
+      });
+    }
 
     // Generate unique order ID (with or without user)
     const userId = req.user?.id || `guest_${Date.now()}`;
@@ -140,6 +155,11 @@ export const createPaymentIntent = async (req, res) => {
       initial_invoice: true,
       hide_identification_id: false,
       more_info: orderId, // Send order ID in more_info
+      customer: {
+        customer_name: customerName || "",
+        email: customerEmail,
+        ...(customerPhone && { phone: customerPhone }),
+      },
     };
 
     console.log(
@@ -841,13 +861,11 @@ export const generatePaymentLinkHandler = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ generatePaymentLinkHandler:", error.message);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        error: "Failed to create payment page",
-        message: error.message,
-      });
+    return res.status(500).json({
+      success: false,
+      error: "Failed to create payment page",
+      message: error.message,
+    });
   }
 };
 
