@@ -667,10 +667,11 @@ export const payPlusWebhook = async (req, res) => {
     console.log("📌 more_info (local orderId):", moreInfo);
 
     // ── 2. Check payment approval ─────────────────────────────────────────────
-    // PayPlus uses status_code === 1 (or "approved") for successful payments
+    // PayPlus uses status_code === 1 (numeric), "1", "000", or "approved"
     const isApproved =
       statusCode === 1 ||
       statusCode === "1" ||
+      statusCode === "000" ||
       String(statusCode).toLowerCase() === "approved" ||
       data?.transaction_status === "approved" ||
       payload?.transaction_status === "approved";
@@ -700,23 +701,25 @@ export const payPlusWebhook = async (req, res) => {
     // ── 4. Update existing order OR create a new one ──────────────────────────
     let savedOrder = null;
 
-    // If more_info holds a local MongoDB orderId, update that document
+    // If more_info holds a local MongoDB orderId, upsert that document
     if (moreInfo) {
       console.log(`🔍 Looking for existing order with id: ${moreInfo}`);
-      const existingOrder = await OrderMongo.findById(moreInfo).catch(
-        () => null,
-      );
+      const updated = await OrderMongo.findByIdAndUpdate(
+        moreInfo,
+        {
+          $set: {
+            paymentStatus: "completed",
+            status: "Paid",
+            transactionUid,
+            updatedAt: new Date(),
+          },
+        },
+        { new: true },
+      ).catch(() => null);
 
-      if (existingOrder) {
-        console.log(`📝 Updating existing order ${existingOrder._id} → Paid`);
-        existingOrder.paymentStatus = "completed";
-        existingOrder.transactionUid = transactionUid;
-        existingOrder.status =
-          existingOrder.status === "pending"
-            ? "processing"
-            : existingOrder.status;
-        savedOrder = await existingOrder.save();
-        console.log(`✅ Order ${savedOrder._id} updated to Paid`);
+      if (updated) {
+        savedOrder = updated;
+        console.log(`Order saved to DB — id: ${savedOrder._id}, status: Paid`);
       } else {
         console.warn(
           `⚠️ No order found for more_info: ${moreInfo} — will create new`,

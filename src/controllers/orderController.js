@@ -150,14 +150,19 @@ export const updateOrderStatus = async (req, res) => {
     }
 
     if (
-      !["pending", "processing", "shipped", "delivered", "cancelled"].includes(
-        status,
-      )
+      ![
+        "pending",
+        "Paid",
+        "processing",
+        "shipped",
+        "delivered",
+        "cancelled",
+      ].includes(status)
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "סטטוס לא תקין. אפשרויות תקינות: pending, processing, shipped, delivered, cancelled",
+          "סטטוס לא תקין. אפשרויות תקינות: pending, Paid, processing, shipped, delivered, cancelled",
       });
     }
 
