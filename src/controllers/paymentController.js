@@ -643,16 +643,20 @@ export const payPlusWebhook = async (req, res) => {
     const payload = req.body;
 
     // ── 1. Extract transaction data ───────────────────────────────────────────
-    // PayPlus S2S callback may nest fields under a "data" key or at root level
+    // PayPlus S2S: primary path is payload.transaction; fallback to root/data
+    const transaction = payload?.transaction ?? {};
     const data = payload?.data ?? payload;
 
     const transactionUid =
+      transaction?.uid ??
+      transaction?.transaction_uid ??
       data?.transaction_uid ??
       data?.transactionUid ??
       payload?.transaction_uid ??
       null;
 
     const statusCode =
+      transaction?.status_code ??
       data?.status_code ??
       data?.status ??
       payload?.status_code ??
@@ -660,19 +664,21 @@ export const payPlusWebhook = async (req, res) => {
       null;
 
     // more_info contains the local orderId we set when generating the link
-    const moreInfo = data?.more_info ?? payload?.more_info ?? null;
+    const moreInfo =
+      transaction?.more_info ?? data?.more_info ?? payload?.more_info ?? null;
 
     console.log("📌 transaction_uid:", transactionUid);
     console.log("📌 status_code:", statusCode);
     console.log("📌 more_info (local orderId):", moreInfo);
 
     // ── 2. Check payment approval ─────────────────────────────────────────────
-    // PayPlus uses status_code === 1 (numeric), "1", "000", or "approved"
+    // PayPlus uses status_code "000" for success (1 / "1" kept for compat)
     const isApproved =
+      statusCode === "000" ||
       statusCode === 1 ||
       statusCode === "1" ||
-      statusCode === "000" ||
       String(statusCode).toLowerCase() === "approved" ||
+      transaction?.transaction_status === "approved" ||
       data?.transaction_status === "approved" ||
       payload?.transaction_status === "approved";
 
@@ -758,7 +764,7 @@ export const payPlusWebhook = async (req, res) => {
               },
             ];
 
-      savedOrder = await OrderMongo.create({
+      const orderDataForCreate = {
         customerName,
         customerEmail,
         customerPhone,
@@ -772,12 +778,16 @@ export const payPlusWebhook = async (req, res) => {
         itemsPrice: totalPrice,
         shippingPrice: 0,
         totalPrice,
-        paymentStatus: "completed",
-        transactionUid,
-        status: "pending",
-      });
+      };
 
-      console.log(`✅ New order created from webhook — id: ${savedOrder._id}`);
+      savedOrder = await Order.createFromPayment(
+        orderDataForCreate,
+        transactionUid,
+      );
+      console.log(
+        `✅ New order created from webhook — id: ${savedOrder._id ?? savedOrder.id}`,
+      );
+      console.log("Order saved to DB");
     }
 
     // ── 5. Auto-generate tax receipt (non-blocking) ───────────────────────────

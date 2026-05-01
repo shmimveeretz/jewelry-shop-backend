@@ -151,18 +151,18 @@ export const updateOrderStatus = async (req, res) => {
 
     if (
       ![
-        "pending",
+        "Pending",
         "Paid",
-        "processing",
-        "shipped",
-        "delivered",
-        "cancelled",
+        "Processing",
+        "Shipped",
+        "Delivered",
+        "Cancelled",
       ].includes(status)
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "סטטוס לא תקין. אפשרויות תקינות: pending, Paid, processing, shipped, delivered, cancelled",
+          "סטטוס לא תקין. אפשרויות תקינות: Pending, Paid, Processing, Shipped, Delivered, Cancelled",
       });
     }
 
@@ -276,7 +276,7 @@ export const orderSuccess = async (req, res) => {
       discountPercent: Number(discountPercent) || 0,
       paymentStatus: "completed",
       transactionUid: resolvedTransactionUid,
-      status: "pending",
+      status: "Pending",
     };
 
     // Link to authenticated user when logged in
@@ -446,7 +446,7 @@ export const verifyTransaction = async (req, res) => {
       discountPercent: Number(orderData.discountPercent) || 0,
       paymentStatus: "completed",
       transactionUid: paymentPageRequestUid,
-      status: "pending",
+      status: "Pending",
       ...(req.user?.id && { userId: req.user.id }),
     });
 

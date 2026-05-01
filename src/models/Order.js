@@ -102,11 +102,12 @@ class OrderModel {
     try {
       if (
         ![
-          "pending",
-          "processing",
-          "shipped",
-          "delivered",
-          "cancelled",
+          "Pending",
+          "Paid",
+          "Processing",
+          "Shipped",
+          "Delivered",
+          "Cancelled",
         ].includes(status)
       ) {
         throw new Error("סטטוס לא תקין");
@@ -179,7 +180,7 @@ class OrderModel {
         discountPercent: orderData.discountPercent || 0,
         paymentStatus: "completed",
         transactionUid,
-        status: "pending",
+        status: "Pending",
       });
       return this.formatOrder(doc);
     } catch (error) {
