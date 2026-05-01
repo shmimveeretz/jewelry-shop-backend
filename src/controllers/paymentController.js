@@ -180,7 +180,7 @@ export const createPaymentIntent = async (req, res) => {
     const paymentPayload = {
       payment_page_uid: process.env.PAYPLUS_MERCHANT_ID || "shmimveeretz.com", // Your payment page UID
       charge_method: 1, // 1 = charge only (תשלום בלבד)
-      amount_pay: finalAmount,
+      amount: finalAmount,
       currency_code: currency,
       sendEmailApproval: true,
       sendEmailFailure: false,
