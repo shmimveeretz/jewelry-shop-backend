@@ -151,7 +151,7 @@ export const createPaymentIntent = async (req, res) => {
         ? sourceItems.map((item) => ({
             name: item.name || "Jewelry",
             quantity: item.quantity || 1,
-            price: item.price,
+            price: Math.round(Number(item.price) * 100) / 100,
             currency_code: currency,
           }))
         : [
@@ -163,11 +163,23 @@ export const createPaymentIntent = async (req, res) => {
             },
           ];
 
+    // PayPlus validates: sum(item.price * item.quantity) === amount
+    // Recompute amount from items to guarantee they always match
+    const itemsTotal =
+      Math.round(
+        formattedItems.reduce(
+          (sum, item) => sum + item.price * item.quantity,
+          0,
+        ) * 100,
+      ) / 100;
+    const finalAmount =
+      itemsTotal > 0 ? itemsTotal : Math.round(amount * 100) / 100;
+
     // Format payload according to PayPlus API spec
     const paymentPayload = {
       payment_page_uid: process.env.PAYPLUS_MERCHANT_ID || "shmimveeretz.com", // Your payment page UID
       charge_method: 1, // 1 = charge only (תשלום בלבד)
-      amount: Math.round(amount * 100) / 100, // Amount in shekels
+      amount: finalAmount, // Must equal sum(item.price * item.quantity)
       currency_code: currency,
       sendEmailApproval: true,
       sendEmailFailure: false,
