@@ -1,6 +1,7 @@
 import axios from "axios";
 import Order from "../models/Order.js";
 import OrderMongo from "../models/OrderMongo.js";
+import CouponMongo from "../models/CouponMongo.js";
 import Product from "../models/Product.js";
 import {
   sendCustomerOrderInvoice,
@@ -875,6 +876,7 @@ export const generatePaymentLinkHandler = async (req, res) => {
       items,
       successUrl,
       failureUrl,
+      couponCode,
     } = req.body;
 
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
@@ -883,8 +885,41 @@ export const generatePaymentLinkHandler = async (req, res) => {
         .json({ success: false, message: "amount חייב להיות מספר חיובי" });
     }
 
+    // ── Coupon validation (server-side) ──────────────────────────────────────
+    let discountPercent = 0;
+    let validatedCouponCode = null;
+
+    if (couponCode) {
+      const coupon = await CouponMongo.findOne({
+        code: couponCode.trim().toUpperCase(),
+        isActive: true,
+      });
+      if (!coupon) {
+        return res.status(400).json({
+          success: false,
+          message: "קוד קופון לא תקין או פג תוקף",
+        });
+      }
+      discountPercent = coupon.discountPercent;
+      validatedCouponCode = coupon.code;
+    }
+
+    // Apply discount to base amount
+    const baseAmount = Math.round(Number(amount) * 100) / 100;
+    const discountAmount =
+      discountPercent > 0
+        ? Math.round(baseAmount * (discountPercent / 100) * 100) / 100
+        : 0;
+    const finalAmount = Math.round((baseAmount - discountAmount) * 100) / 100;
+
+    if (discountPercent > 0) {
+      console.log(
+        `🎟️  Coupon "${validatedCouponCode}" → ${discountPercent}% off — ${baseAmount} → ${finalAmount} ILS`,
+      );
+    }
+
     const result = await generatePaymentLink({
-      amount: Number(amount),
+      amount: finalAmount,
       currency_code,
       description,
       customerName,
@@ -901,8 +936,11 @@ export const generatePaymentLinkHandler = async (req, res) => {
     return res.status(200).json({
       success: true,
       payment_page_link: result.paymentPageUrl,
-      paymentPageUrl: result.paymentPageUrl, // keep old field for backward-compat
+      paymentPageUrl: result.paymentPageUrl,
       pageRequestUid: result.pageRequestUid,
+      finalAmount,
+      discountPercent,
+      couponCode: validatedCouponCode,
     });
   } catch (error) {
     console.error("❌ generatePaymentLinkHandler:", error.message);
