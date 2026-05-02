@@ -27,8 +27,8 @@ const ProductSchema = new mongoose.Schema(
       min: 0,
     },
     priceAdditions: {
-      type: Map,
-      of: Number,
+      type: Object,
+      default: {},
     },
     metalType: {
       type: Map,
