@@ -18,9 +18,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -29,11 +29,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Aleph_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Aleph_Gold_Main.jpg",
@@ -45,10 +41,7 @@
     "meaningHe": "אחדות, התחלה, בורא העולם, אין-סוף",
     "meaningEn": "Unity, Beginning, Creator, Infinity",
     "gematria": 1,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -69,9 +62,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -80,11 +73,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Beit_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Beit_Gold_Main.jpg",
@@ -96,10 +85,7 @@
     "meaningHe": "בית, ברכה, בינה, דירה",
     "meaningEn": "House, Blessing, Understanding, Dwelling",
     "gematria": 2,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -120,9 +106,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -131,11 +117,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Gimel_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Gimel_Gold_Main.jpg",
@@ -147,10 +129,7 @@
     "meaningHe": "גמילות חסדים, נתינה, גדולה",
     "meaningEn": "Acts of Kindness, Giving, Greatness",
     "gematria": 3,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -171,9 +150,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -182,11 +161,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Dalet_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Dalet_Gold_Main.jpg",
@@ -198,10 +173,7 @@
     "meaningHe": "דלת, ענווה, פתיחת דלתות",
     "meaningEn": "Door, Humility, Opening Doors",
     "gematria": 4,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -222,9 +194,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -233,11 +205,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Heiyh_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Heiyh_Gold_Main.jpg",
@@ -249,10 +217,7 @@
     "meaningHe": "נשמה, נשימה, התגלות",
     "meaningEn": "Soul, Breath, Revelation",
     "gematria": 5,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -273,9 +238,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -284,11 +249,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Vav_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Vav_Gold_Main.jpg",
@@ -300,10 +261,7 @@
     "meaningHe": "חיבור, קישור, המשכיות",
     "meaningEn": "Connection, Linking, Continuity",
     "gematria": 6,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -324,9 +282,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -335,11 +293,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Zain_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Zain_Gold_Main.jpg",
@@ -351,10 +305,7 @@
     "meaningHe": "נשק רוחני, כתר, זכירה",
     "meaningEn": "Spiritual Weapon, Crown, Remembrance",
     "gematria": 7,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -375,9 +326,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -386,11 +337,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Chet_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Chet_Gold_Main.jpg",
@@ -402,10 +349,7 @@
     "meaningHe": "חיים, חיות, תשובה",
     "meaningEn": "Life, Vitality, Repentance",
     "gematria": 8,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -426,9 +370,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -437,11 +381,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Tet_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Tet_Gold_Main.jpg",
@@ -453,10 +393,7 @@
     "meaningHe": "טוב, חסד פנימי, צניעות",
     "meaningEn": "Good, Inner Kindness, Modesty",
     "gematria": 9,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -477,9 +414,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -488,11 +425,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Yud_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Yud_Gold_Main.jpg",
@@ -504,10 +437,7 @@
     "meaningHe": "נקודה, זרע, קדושה",
     "meaningEn": "Point, Seed, Holiness",
     "gematria": 10,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -528,9 +458,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -539,11 +469,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Chaf_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Chaf_Gold_Main.jpg",
@@ -555,10 +481,7 @@
     "meaningHe": "כף יד, כתר, פעולה",
     "meaningEn": "Palm, Crown, Action",
     "gematria": 20,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -579,9 +502,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -590,11 +513,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Lamed_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Lamed_Gold_Main.jpg",
@@ -606,10 +525,7 @@
     "meaningHe": "לימוד, הוראה, שאיפה",
     "meaningEn": "Learning, Teaching, Aspiration",
     "gematria": 30,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -630,9 +546,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -641,11 +557,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Mem_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Mem_Gold_Main.jpg",
@@ -657,10 +569,7 @@
     "meaningHe": "מים, מלך, מקור",
     "meaningEn": "Water, King, Source",
     "gematria": 40,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -681,9 +590,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -692,11 +601,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Nun_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Nun_Gold_Main.jpg",
@@ -708,10 +613,7 @@
     "meaningHe": "נשמה, נאמנות, צמיחה",
     "meaningEn": "Soul, Faithfulness, Growth",
     "gematria": 50,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -732,9 +634,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -743,11 +645,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Samech_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Samech_Gold_Main.jpg",
@@ -759,10 +657,7 @@
     "meaningHe": "סמיכה, תמיכה, הגנה",
     "meaningEn": "Support, Assistance, Protection",
     "gematria": 60,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -783,9 +678,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -794,11 +689,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Ayin_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Ayin_Gold_Main.jpg",
@@ -810,10 +701,7 @@
     "meaningHe": "ראייה, תובנה, השגחה",
     "meaningEn": "Sight, Insight, Providence",
     "gematria": 70,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -834,9 +722,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -845,11 +733,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Peih_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Peih_Gold_Main.jpg",
@@ -861,10 +745,7 @@
     "meaningHe": "פה, דיבור, תפילה",
     "meaningEn": "Mouth, Speech, Prayer",
     "gematria": 80,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -885,9 +766,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -896,11 +777,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Tzadic_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Tzadic_Gold_Main.jpg",
@@ -912,10 +789,7 @@
     "meaningHe": "צדיק, צדק, קדושה",
     "meaningEn": "Righteous, Justice, Holiness",
     "gematria": 360,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -936,9 +810,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -947,11 +821,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Kuf_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Kuf_Gold_Main.jpg",
@@ -963,10 +833,7 @@
     "meaningHe": "קדושה, קול, התרוממות",
     "meaningEn": "Holiness, Voice, Elevation",
     "gematria": 100,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -987,9 +854,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -998,11 +865,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Reish_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Reish_Gold_Main.jpg",
@@ -1014,10 +877,7 @@
     "meaningHe": "ראש, ראשית, הנהגה",
     "meaningEn": "Head, Beginning, Leadership",
     "gematria": 200,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -1038,9 +898,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1049,11 +909,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Shin_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Shin_Gold_Main.jpg",
@@ -1064,11 +920,8 @@
     "descriptionEn": "Shin - Symbolizes divine fire, peace and completeness. Shin appears on tefillin and represents God's name. Teaches about the inner fire and spiritual completeness.",
     "meaningHe": "אש, שלום, שלמות",
     "meaningEn": "Fire, Peace, Completeness",
-    "gematria": 300,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "gematria": 0,
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -1089,9 +942,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1100,11 +953,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Taf_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Letter_Taf_Gold_Main.jpg",
@@ -1116,10 +965,7 @@
     "meaningHe": "חותם, אמת, השלמה",
     "meaningEn": "Seal, Truth, Completion",
     "gematria": 400,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -1147,9 +993,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1158,11 +1004,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Ruby_Stone_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Ruby_Stone.png"
@@ -1171,10 +1013,7 @@
     "descriptionEn": "Ruby Stone - The first Hoshen stone, associated with the tribe of Reuben and Aries zodiac. A precious red stone symbolizing fertility, vitality and power. Connected to abundance in its broadest sense - blooming, growth and personal prosperity. Provides stability, resilience and inner strength. Strengthens charisma, leadership and passion for life.",
     "properties": "מעניקה עוצמה אישית, כריזמה, זוהר פנימי, יציבות רגשית ומוטיבציה להשגת מטרות",
     "propertiesEn": "Provides personal power, charisma, inner radiance, emotional stability and motivation to achieve goals",
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -1202,9 +1041,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1213,11 +1052,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Blue_Topaz_Stone_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Blue_Topaz_Stone.png"
@@ -1226,10 +1061,7 @@
     "descriptionEn": "Topaz Stone - The second Hoshen stone, associated with the tribe of Simeon and Taurus zodiac. A strong golden stone strengthening willpower, intellect and motivation. Facilitates adaptation to situations and helps find the right beauty and balance. Provides a sense of inner beauty leading to self-confidence and capability.",
     "properties": "מחזקת כוח רצון, אינטלקט, מוטיבציה, ביטחון עצמי ויכולת התאמה למצבים",
     "propertiesEn": "Strengthens willpower, intellect, motivation, self-confidence and adaptability to situations",
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -1257,9 +1089,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1268,11 +1100,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Emerald_Stone_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Emerald_Stone.png"
@@ -1281,10 +1109,7 @@
     "descriptionEn": "Emerald Stone - The third Hoshen stone, associated with the tribe of Levi and Gemini zodiac. A precious green stone connected to optimism and spiritual power. Strengthens self-expression, memory and emotional-mental resilience. Relieves work pressures with others. Encourages loyalty, giving and communication.",
     "properties": "מחזקת אופטימיות, הבעה עצמית, זיכרון, חוסן רגשי ותקשורת טובה",
     "propertiesEn": "Strengthens optimism, self-expression, memory, emotional resilience and good communication",
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -1312,9 +1137,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1323,11 +1148,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Granite_Stone_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Granite_Stone.png"
@@ -1336,10 +1157,7 @@
     "descriptionEn": "Garnet Stone - The fourth Hoshen stone, associated with the tribe of Judah and Cancer zodiac. A red-burgundy stone strengthening self-confidence and willpower. Excellent for withstanding pressures and new challenges. Connects to higher truth, strengthens decision-making and maintaining personal stance. Balances blood system.",
     "properties": "מחזקת ביטחון עצמי, כוח רצון, עמידה בלחצים וקבלת החלטות נכונות",
     "propertiesEn": "Strengthens self-confidence, willpower, resilience under pressure and correct decision-making",
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -1367,9 +1185,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1378,11 +1196,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Sapphire_Stone_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Sapphire_Stone.png"
@@ -1391,10 +1205,7 @@
     "descriptionEn": "Sapphire Stone - The fifth Hoshen stone, associated with the tribe of Issachar and Leo zodiac. A royal blue stone strengthening wisdom, intellect and focus. Helps thinking about solutions and implementing them. Strengthens decisiveness, courage and coping. Encourages self-expression and discipline. The stone of leadership and integrity.",
     "properties": "מחזקת חוכמה, אינטלקט, מיקוד, החלטיות, אומץ והבעה עצמית",
     "propertiesEn": "Strengthens wisdom, intellect, focus, decisiveness, courage and self-expression",
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -1422,9 +1233,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1433,11 +1244,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Diamond_Stone_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Diamond_Stone.png"
@@ -1446,10 +1253,7 @@
     "descriptionEn": "Diamond Stone - The sixth Hoshen stone, associated with the tribe of Zebulun and Virgo zodiac. The most precious stone, radiating power, softness and refinement simultaneously. Symbolizes loyalty, love and abundance. Strengthens the aura and balances metabolism. The stone of purity, perfection and eternal light.",
     "properties": "משדרת עוצמה ועידון, מסמלת נאמנות ושפע, מחזקת הילה ואיזון מטבולי",
     "propertiesEn": "Radiates power and refinement, symbolizes loyalty and abundance, strengthens aura and metabolic balance",
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -1477,9 +1281,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1488,11 +1292,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/v1777125968/Opal_Stone_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Opal_Stone.png"
@@ -1501,10 +1301,7 @@
     "descriptionEn": "Opal Stone - The eighth Hoshen stone, associated with the tribe of Dan and Scorpio zodiac. A special stone containing water representing emotion and femininity. Awakens and amplifies every trait and energetic state. Increases creativity, imagination and helps overcome dark sides. Encourages internal development processes and potential realization.",
     "properties": "מעוררת ומעצימה, מגבירה יצירתיות ודמיון, מסייעת בהתפתחות פנימית",
     "propertiesEn": "Awakens and amplifies, increases creativity and imagination, assists in internal development",
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -1532,9 +1329,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1543,11 +1340,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Smokey_Quartz_Stone_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Smokey_Quartz_Stone.png"
@@ -1556,10 +1349,7 @@
     "descriptionEn": "Agate Stone - The ninth Hoshen stone, associated with the tribe of Naphtali and Sagittarius zodiac. A stone that liberates from logic and helps in change and openness. Radiates transition from logical to liberated thinking allowing acceptance of others and new things. Leads to higher energetic powers. Good for health and general balance.",
     "properties": "משחררת מלוגיקה, מסייעת בשינוי, מאפשרת קבלת האחר, מובילה לאנרגיות גבוהות",
     "propertiesEn": "Liberates from logic, helps in change, enables acceptance of others, leads to high energies",
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -1587,9 +1377,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1598,11 +1388,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Emathyst_Stone_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Emathyst_Stone.png"
@@ -1611,10 +1397,7 @@
     "descriptionEn": "Amethyst Stone - The tenth Hoshen stone, associated with the tribe of Gad and Capricorn zodiac. A magnificent purple stone strengthening willpower, self-control and intuition. Encourages good dreams and peaceful sleep. Provides general protection. Relieves headaches and balances metabolic and hearing systems. The stone of tranquility and inner balance.",
     "properties": "מחזקת כוח רצון ושליטה עצמית, מעודדת שינה טובה, מעניקה הגנה ואיזון",
     "propertiesEn": "Strengthens willpower and self-control, encourages good sleep, provides protection and balance",
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -1642,9 +1425,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1653,11 +1436,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Aquamarine_Stone_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Aquamarine_Stone.png"
@@ -1666,10 +1445,7 @@
     "descriptionEn": "Aquamarine Stone - The eleventh Hoshen stone, associated with the tribe of Asher and Aquarius zodiac. A calming blue-green stone providing deep inner peace. Encourages flow in life even in challenging situations. Reduces confusion and strengthens intellect. Strengthens eyes and affects throat area. The stone of serenity and clear communication.",
     "properties": "מרגיעה, מעניקה שלווה, מעודדת זרימה, מחזקת אינטלקט ותקשורת",
     "propertiesEn": "Calming, provides serenity, encourages flow, strengthens intellect and communication",
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -1697,9 +1473,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1708,11 +1484,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Onyx_Stone_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Onyx_Stone.png"
@@ -1721,10 +1493,7 @@
     "descriptionEn": "Onyx Stone - The twelfth Hoshen stone, associated with the tribe of Joseph and Pisces zodiac. A black grounding stone providing physical, emotional and mental stability. Maintains balance and protects from environmental energies. Provides courage, security and connection to reality. Facilitates self-control and decision-making. The stone of inspiration and connection to roots.",
     "properties": "מקרקעת, מייצבת, מגינה, מעניקה אומץ וביטחון, מסייעת בקבלת החלטות",
     "propertiesEn": "Grounding, stabilizing, protective, provides courage and security, assists in decision-making",
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -1752,9 +1521,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1763,11 +1532,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Jesper_Stone_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Jesper_Stone.png"
@@ -1776,10 +1541,7 @@
     "descriptionEn": "Jasper Stone - The seventh Hoshen stone, associated with the tribe of Benjamin and Libra zodiac. A grounding stone related to balance and protection. Symbolizes connection to earth and basic life force. Increases motivation, sensuality and sexual balance. Creates general balance for the human system and excellent as 'preventive medicine'.",
     "properties": "מקרקעת, מאזנת, מגינה מאנרגיות שליליות, מגבירה מוטיבציה וחושניות",
     "propertiesEn": "Grounding, balancing, protects from negative energies, increases motivation and sensuality",
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -1802,9 +1564,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1813,11 +1575,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Aries_Zodiac_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Aries_Zodiac.png"
@@ -1836,9 +1594,7 @@
     "planetEn": "Mars",
     "dates": "20.3-19.4",
     "hebrewMonth": "ניסן",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -1861,9 +1617,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1872,11 +1628,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Taurus_Zodiac_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Taurus_Zodiac.png"
@@ -1895,9 +1647,7 @@
     "planetEn": "Venus",
     "dates": "20.4-20.5",
     "hebrewMonth": "אייר",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -1920,9 +1670,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1931,11 +1681,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Gemini_Zodiac_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Gemini_Zodiac.png"
@@ -1954,9 +1700,7 @@
     "planetEn": "Mercury",
     "dates": "21.5-20.6",
     "hebrewMonth": "סיוון",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -1979,9 +1723,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -1990,11 +1734,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Cancer_Zodiac_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Cancer_Zodiac.png"
@@ -2013,13 +1753,11 @@
     "planetEn": "Moon",
     "dates": "21.6-22.7",
     "hebrewMonth": "תמוז",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
-      "$oid": "69d8b56711eb709fd6847270"
+      "$oid": "69d8b56711eb709fd68470"
     },
     "id": "leo-pendant",
     "name": "תליון מזל אריה",
@@ -2038,9 +1776,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -2049,11 +1787,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Leo_Zodiac_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Leo_Zodiac.png"
@@ -2072,9 +1806,7 @@
     "planetEn": "Sun",
     "dates": "23.7-22.8",
     "hebrewMonth": "אב",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -2097,9 +1829,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -2108,11 +1840,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Virgo_Zodiac_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Virgo_Zodiac.png"
@@ -2131,9 +1859,7 @@
     "planetEn": "Mercury",
     "dates": "23.8-22.9",
     "hebrewMonth": "אלול",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -2156,9 +1882,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -2167,11 +1893,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Scorpio_Zodiac_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Scorpio_Zodiac.png"
@@ -2190,9 +1912,7 @@
     "planetEn": "Pluto",
     "dates": "23.10-21.11",
     "hebrewMonth": "חשוון",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -2215,9 +1935,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -2226,11 +1946,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Sagittarius_Zodiac_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Sagittarius_Zodiac.png"
@@ -2249,9 +1965,7 @@
     "planetEn": "Jupiter",
     "dates": "22.11-21.12",
     "hebrewMonth": "כסלו",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -2274,9 +1988,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -2285,11 +1999,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Capricorn_Zodiac_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Capricorn_Zodiac.png"
@@ -2308,9 +2018,7 @@
     "planetEn": "Saturn",
     "dates": "22.12-19.1",
     "hebrewMonth": "טבת",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -2333,9 +2041,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -2344,11 +2052,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Aquarius_Zodiac_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Aquarius_Zodiac.png"
@@ -2367,9 +2071,7 @@
     "planetEn": "Uranus",
     "dates": "20.1-18.2",
     "hebrewMonth": "שבט",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -2392,9 +2094,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -2403,11 +2105,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Pisces_Zodiac_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Pisces_Zodiac.png"
@@ -2426,9 +2124,7 @@
     "planetEn": "Neptune",
     "dates": "19.2-20.3",
     "hebrewMonth": "אדר",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -2451,9 +2147,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -2462,11 +2158,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Libra_Zodiac_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Libra_Zodiac.png"
@@ -2485,9 +2177,7 @@
     "planetEn": "Venus",
     "dates": "23.9-22.10",
     "hebrewMonth": "תשרי",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -2499,12 +2189,8 @@
     "letter": "כ",
     "category": "כוכבים",
     "categoryEn": "Stars",
-    "zodiacSigns": [
-      "אריה"
-    ],
-    "zodiacSignsEn": [
-      "Leo"
-    ],
+    "zodiacSigns": ["אריה"],
+    "zodiacSignsEn": ["Leo"],
     "price": 360,
     "priceAdditions": {
       "metalType": {
@@ -2514,9 +2200,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -2525,11 +2211,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Star_Sun_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Star_Sun_Silver.png"
@@ -2539,10 +2221,7 @@
     "meaningHe": "זהות, אור, יצירתיות",
     "meaningEn": "Identity, Light, Creativity",
     "gematria": 20,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -2554,12 +2233,8 @@
     "letter": "ת",
     "category": "כוכבים",
     "categoryEn": "Stars",
-    "zodiacSigns": [
-      "סרטן"
-    ],
-    "zodiacSignsEn": [
-      "Cancer"
-    ],
+    "zodiacSigns": ["סרטן"],
+    "zodiacSignsEn": ["Cancer"],
     "price": 360,
     "priceAdditions": {
       "metalType": {
@@ -2569,9 +2244,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -2580,11 +2255,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Star_Moon_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Star_Moon_Silver.png"
@@ -2594,10 +2265,7 @@
     "meaningHe": "רגש, אינטואיציה, נשיות",
     "meaningEn": "Emotion, Intuition, Femininity",
     "gematria": 400,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -2609,14 +2277,8 @@
     "letter": "ד",
     "category": "כוכבים",
     "categoryEn": "Stars",
-    "zodiacSigns": [
-      "טלה",
-      "עקרב"
-    ],
-    "zodiacSignsEn": [
-      "Aries",
-      "Scorpio"
-    ],
+    "zodiacSigns": ["טלה", "עקרב"],
+    "zodiacSignsEn": ["Aries", "Scorpio"],
     "price": 360,
     "priceAdditions": {
       "metalType": {
@@ -2626,9 +2288,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -2637,11 +2299,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Star_Mars_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Star_Mars_Silver.png"
@@ -2651,10 +2309,7 @@
     "meaningHe": "אומץ, תשוקה, פעולה",
     "meaningEn": "Courage, Passion, Action",
     "gematria": 4,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -2666,14 +2321,8 @@
     "letter": "ר",
     "category": "כוכבים",
     "categoryEn": "Stars",
-    "zodiacSigns": [
-      "תאומים",
-      "בתולה"
-    ],
-    "zodiacSignsEn": [
-      "Gemini",
-      "Virgo"
-    ],
+    "zodiacSigns": ["תאומים", "בתולה"],
+    "zodiacSignsEn": ["Gemini", "Virgo"],
     "price": 360,
     "priceAdditions": {
       "metalType": {
@@ -2683,9 +2332,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -2694,11 +2343,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Star_Mercury_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Star_Mercury_Silver.png"
@@ -2708,10 +2353,7 @@
     "meaningHe": "תקשורת, שכל, ביטוי",
     "meaningEn": "Communication, Intellect, Expression",
     "gematria": 200,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -2723,14 +2365,8 @@
     "letter": "ג",
     "category": "כוכבים",
     "categoryEn": "Stars",
-    "zodiacSigns": [
-      "קשת",
-      "דגים"
-    ],
-    "zodiacSignsEn": [
-      "Sagittarius",
-      "Pisces"
-    ],
+    "zodiacSigns": ["קשת", "דגים"],
+    "zodiacSignsEn": ["Sagittarius", "Pisces"],
     "price": 360,
     "priceAdditions": {
       "metalType": {
@@ -2740,9 +2376,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -2751,11 +2387,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Star_Jupiter_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Star_Jupiter_Silver.png"
@@ -2765,10 +2397,7 @@
     "meaningHe": "שפע, חוכמה, מזל",
     "meaningEn": "Abundance, Wisdom, Luck",
     "gematria": 3,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -2780,14 +2409,8 @@
     "letter": "פ",
     "category": "כוכבים",
     "categoryEn": "Stars",
-    "zodiacSigns": [
-      "שור",
-      "מאזניים"
-    ],
-    "zodiacSignsEn": [
-      "Taurus",
-      "Libra"
-    ],
+    "zodiacSigns": ["שור", "מאזניים"],
+    "zodiacSignsEn": ["Taurus", "Libra"],
     "price": 360,
     "priceAdditions": {
       "metalType": {
@@ -2797,9 +2420,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -2808,11 +2431,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Star_Venus_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Star_Venus_Silver.png"
@@ -2822,10 +2441,7 @@
     "meaningHe": "אהבה, יופי, הרמוניה",
     "meaningEn": "Love, Beauty, Harmony",
     "gematria": 80,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -2837,14 +2453,8 @@
     "letter": "ב",
     "category": "כוכבים",
     "categoryEn": "Stars",
-    "zodiacSigns": [
-      "גדי",
-      "דלי"
-    ],
-    "zodiacSignsEn": [
-      "Capricorn",
-      "Aquarius"
-    ],
+    "zodiacSigns": ["גדי", "דלי"],
+    "zodiacSignsEn": ["Capricorn", "Aquarius"],
     "price": 360,
     "priceAdditions": {
       "metalType": {
@@ -2854,9 +2464,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -2865,11 +2475,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Star_Saturn_Silver_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Star_Saturn_Gold_Main.jpg",
@@ -2881,10 +2487,7 @@
     "meaningHe": "משמעת, זמן, יציבות",
     "meaningEn": "Discipline, Time, Stability",
     "gematria": 2,
-    "types": [
-      "תליון",
-      "טבעת"
-    ]
+    "types": ["תליון", "טבעת"]
   },
   {
     "_id": {
@@ -2912,9 +2515,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -2923,11 +2526,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Aries_Trinity_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Aries_Trinity_Model.jpg",
@@ -2941,9 +2540,7 @@
     "elementEn": "Fire",
     "dates": "20.3-19.4",
     "hebrewMonth": "ניסן",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -2971,9 +2568,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -2982,11 +2579,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Taurus_Trinity_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Taurus_Trinity_Model.jpg",
@@ -3000,9 +2593,7 @@
     "elementEn": "Earth",
     "dates": "20.4-20.5",
     "hebrewMonth": "אייר",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -3030,9 +2621,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -3041,11 +2632,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Gemini_Trinity_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Gemini_Trinity_Model.jpg",
@@ -3059,9 +2646,7 @@
     "elementEn": "Air",
     "dates": "21.5-20.6",
     "hebrewMonth": "סיוון",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -3089,9 +2674,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -3100,11 +2685,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Cancer_Trinity_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Cancer_Trinity_Model.jpg",
@@ -3118,9 +2699,7 @@
     "elementEn": "Water",
     "dates": "21.6-22.7",
     "hebrewMonth": "תמוז",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -3148,9 +2727,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -3159,11 +2738,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Leo_Trinity_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Leo_Trinity_Model.jpg",
@@ -3177,9 +2752,7 @@
     "elementEn": "Fire",
     "dates": "23.7-22.8",
     "hebrewMonth": "אב",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -3207,9 +2780,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -3218,11 +2791,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Virgo_Trinity_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Virgo_Trinity_Model.jpg",
@@ -3236,9 +2805,7 @@
     "elementEn": "Earth",
     "dates": "23.8-22.9",
     "hebrewMonth": "אלול",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -3266,9 +2833,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -3277,11 +2844,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Scorpio_Trinity_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Scorpio_Trinity_Model.jpg",
@@ -3295,9 +2858,7 @@
     "elementEn": "Water",
     "dates": "23.10-21.11",
     "hebrewMonth": "חשוון",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -3325,9 +2886,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -3336,11 +2897,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Sagittarius_Trinity_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Sagittarius_Trinity_Model.jpg",
@@ -3354,9 +2911,7 @@
     "elementEn": "Fire",
     "dates": "22.11-21.12",
     "hebrewMonth": "כסלו",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -3384,9 +2939,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -3395,11 +2950,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Capricorn_Trinity_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Capricorn_Trinity_Model.jpg",
@@ -3413,9 +2964,7 @@
     "elementEn": "Earth",
     "dates": "22.12-19.1",
     "hebrewMonth": "טבת",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -3443,9 +2992,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -3454,11 +3003,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Aquarius_Trinity_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Aquarius_Trinity_Model.jpg",
@@ -3472,9 +3017,7 @@
     "elementEn": "Air",
     "dates": "20.1-18.2",
     "hebrewMonth": "שבט",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -3502,9 +3045,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -3513,11 +3056,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Pisces_Trinity_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Pisces_Trinity_Model.jpg",
@@ -3531,9 +3070,7 @@
     "elementEn": "Water",
     "dates": "19.2-20.3",
     "hebrewMonth": "אדר",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   },
   {
     "_id": {
@@ -3561,9 +3098,9 @@
       },
       "chain": {
         "ללא שרשרת": 0,
-        "כסף 925": 270,
-        "ציפוי זהב": 300,
-        "זהב 14 קראט": 1500
+        "כסף 925": 0,
+        "ציפוי זהב": 0,
+        "זהב 14 קראט": 0
       },
       "length": {
         "40": 0,
@@ -3572,11 +3109,7 @@
         "50": 0
       }
     },
-    "metals": [
-      "כסף 925",
-      "ציפוי זהב",
-      "זהב 14 קראט"
-    ],
+    "metals": ["כסף 925", "ציפוי זהב", "זהב 14 קראט"],
     "images": [
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Libra_Trinity_Main.jpg",
       "https://res.cloudinary.com/dhayarvh3/image/upload/f_auto,q_auto/Libra_Trinity_Model.jpg",
@@ -3590,8 +3123,6 @@
     "elementEn": "Air",
     "dates": "23.9-22.10",
     "hebrewMonth": "תשרי",
-    "types": [
-      "תליון"
-    ]
+    "types": ["תליון"]
   }
 ]
