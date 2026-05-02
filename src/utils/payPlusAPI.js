@@ -262,6 +262,23 @@ export const createManualDocument = async (
 };
 
 /**
+ * Get transaction details by payment page request UID
+ * @param {string} pageRequestUid - PayPlus page_request_uid
+ * @returns {Promise<Object>} Transaction details
+ */
+export const getTransactionByPageRequestUid = async (pageRequestUid) => {
+  try {
+    const response = await payPlusAPI.get(
+      `/PaymentPages/GetTransactionDetails/${pageRequestUid}`,
+    );
+    return response.data;
+  } catch (error) {
+    console.error("PayPlus API Error:", error.response?.data || error.message);
+    throw new Error("Failed to fetch transaction by page request UID");
+  }
+};
+
+/**
  * Get transaction status
  * @param {string} transactionId - PayPlus transaction ID
  * @returns {Promise<Object>} Transaction details
