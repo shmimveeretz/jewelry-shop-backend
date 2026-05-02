@@ -92,7 +92,16 @@ export const verifyPayment = async (req, res) => {
 // @access  Private
 export const createPaymentIntent = async (req, res) => {
   try {
-    const { amount, currency = "ILS", orderItems, items } = req.body;
+    const {
+      amount,
+      currency = "ILS",
+      orderItems,
+      items,
+      customerName,
+      customerEmail,
+      customerPhone,
+      shippingAddress,
+    } = req.body;
 
     // Generate unique order ID (with or without user)
     const userId = req.user?.id || `guest_${Date.now()}`;
@@ -116,16 +125,28 @@ export const createPaymentIntent = async (req, res) => {
       0,
     );
 
+    // Build customer object for PayPlus invoice
+    const customer = {
+      customer_name:
+        customerName ||
+        shippingAddress?.name ||
+        shippingAddress?.fullName ||
+        "",
+      email: customerEmail || shippingAddress?.email || "",
+      phone: customerPhone || shippingAddress?.phone || "",
+    };
+
     // Format payload according to PayPlus API spec
     const paymentPayload = {
       payment_page_uid: process.env.PAYPLUS_MERCHANT_ID || "shmimveeretz.com", // Your payment page UID
       charge_method: 1, // 1 = charge only (תשלום בלבד)
       amount: Math.round(calculatedTotal * 100) / 100, // Derived from items — guaranteed to match
       currency_code: currency,
+      customer,
       items: formattedItems,
       sendEmailApproval: true,
       sendEmailFailure: false,
-      refURL_callback: `${process.env.BACKEND_URL || "http://localhost:5000"}/apiwebhook`,
+      refURL_callback: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/payment/webhook`,
       initial_invoice: true,
       hide_identification_id: false,
       more_info: orderId, // Send order ID in more_info
