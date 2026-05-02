@@ -113,7 +113,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/contact", contactRoutes);
-app.use("/api/smtp", smtpRoutes);
+// app.use("/api/smtp", smtpRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/email", emailRoutes);
 
