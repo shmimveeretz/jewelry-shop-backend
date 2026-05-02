@@ -17,6 +17,7 @@ import contactRoutes from "./routes/contactRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import emailRoutes from "./routes/emailRoutes.js";
 import couponRoutes from "./routes/couponRoutes.js";
+import newsletterRoutes from "./routes/newsletterRoutes.js";
 import Device from "./models/Device.js";
 
 // Load env vars
@@ -118,6 +119,7 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/email", emailRoutes);
 app.use("/api/coupons", couponRoutes);
+app.use("/api/newsletter", newsletterRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
