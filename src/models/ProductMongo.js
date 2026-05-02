@@ -38,7 +38,6 @@ const ProductSchema = new mongoose.Schema(
       type: Map,
       of: Number,
     },
-    metals: [String],
     images: [String], // Array of Cloudinary URLs
     description: {
       type: String,

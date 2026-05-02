@@ -16,7 +16,6 @@ class ProductModel {
       category: product.category,
       price: product.price,
       priceAdditions: product.priceAdditions || {},
-      metals: product.metals,
       images: product.images,
       description: product.description,
       meaningHe: product.meaningHe,
