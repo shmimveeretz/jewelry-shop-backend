@@ -1,7 +1,6 @@
 import axios from "axios";
 import Order from "../models/Order.js";
 import OrderMongo from "../models/OrderMongo.js";
-import CouponMongo from "../models/CouponMongo.js";
 import Product from "../models/Product.js";
 import {
   sendCustomerOrderInvoice,
@@ -12,33 +11,6 @@ import {
   generatePaymentLink,
   createManualDocument,
 } from "../utils/payPlusAPI.js";
-
-// Helper: auto-generate a tax receipt after a verified payment (non-blocking)
-const autoGenerateInvoice = (order, transactionUid) => {
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-  createManualDocument("inv_tax_receipt", {
-    customer: {
-      name: order.customerName,
-      email: order.customerEmail || order.email || "",
-      phone: order.customerPhone || "",
-    },
-    items: (order.items || []).map((item) => ({
-      name: item.name,
-      quantity: item.quantity ?? 1,
-      price: item.price,
-    })),
-    payments: [{ paymentMethod: 4, sum: order.totalPrice }],
-    totalAmount: order.totalPrice,
-    currency_code: "ILS",
-    vatType: "Vat-type-included",
-    language: "He",
-    doc_date: today,
-    transactionUid,
-    sendEmail: true,
-  }).catch((err) =>
-    console.error("❌ Auto-invoice generation error:", err.message),
-  );
-};
 
 // @desc    Verify PayPlus payment and save order to DB
 // @route   GET /api/payment/verify/:transactionUid
@@ -83,9 +55,6 @@ export const verifyPayment = async (req, res) => {
     // Create the order
     const order = await Order.createFromPayment(orderData, transactionUid);
 
-    // Auto-generate tax receipt via PayPlus Books (non-blocking)
-    autoGenerateInvoice(order, transactionUid);
-
     // Send confirmation emails (non-blocking)
     const emailData = {
       orderNumber: transactionUid,
@@ -123,76 +92,36 @@ export const verifyPayment = async (req, res) => {
 // @access  Private
 export const createPaymentIntent = async (req, res) => {
   try {
-    const {
-      amount,
-      currency = "ILS",
-      items,
-      orderItems = [],
-      customerName,
-      customerEmail,
-      customerPhone,
-    } = req.body;
-
-    // Validate required customer fields before hitting PayPlus
-    if (!customerEmail) {
-      return res.status(400).json({
-        success: false,
-        message: "Customer email is strictly required to generate an invoice.",
-      });
-    }
+    const { amount, currency = "ILS", orderItems, items } = req.body;
 
     // Generate unique order ID (with or without user)
     const userId = req.user?.id || `guest_${Date.now()}`;
     const orderId = `order_${Date.now()}_${userId}`;
 
-    // Format items for PayPlus invoice line items
-    const sourceItems = items && items.length > 0 ? items : orderItems;
+    // Build items array for PayPlus invoice
+    const sourceItems = orderItems || items;
     const formattedItems =
       sourceItems && sourceItems.length > 0
         ? sourceItems.map((item) => ({
-            name: item.name || "Jewelry",
+            name: item.name,
             quantity: item.quantity || 1,
-            price: Math.round(Number(item.price) * 100) / 100,
-            currency_code: currency,
+            price: item.price,
           }))
-        : [
-            {
-              name: "General Product",
-              quantity: 1,
-              price: Math.round(amount * 100) / 100,
-              currency_code: currency,
-            },
-          ];
-
-    // PayPlus validates: sum(item.price * item.quantity) === amount
-    // Recompute amount from items to guarantee they always match
-    const itemsTotal =
-      Math.round(
-        formattedItems.reduce(
-          (sum, item) => sum + item.price * item.quantity,
-          0,
-        ) * 100,
-      ) / 100;
-    const finalAmount =
-      itemsTotal > 0 ? itemsTotal : Math.round(amount * 100) / 100;
+        : [{ name: "General Jewelry", quantity: 1, price: req.body.amount }];
 
     // Format payload according to PayPlus API spec
     const paymentPayload = {
       payment_page_uid: process.env.PAYPLUS_MERCHANT_ID || "shmimveeretz.com", // Your payment page UID
       charge_method: 1, // 1 = charge only (תשלום בלבד)
-      amount: finalAmount,
+      amount: Math.round(amount * 100) / 100, // Amount in shekels
       currency_code: currency,
+      items: formattedItems,
       sendEmailApproval: true,
       sendEmailFailure: false,
-      refURL_callback: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/payment/webhook`,
+      refURL_callback: `${process.env.BACKEND_URL || "http://localhost:5000"}/apiwebhook`,
       initial_invoice: true,
       hide_identification_id: false,
       more_info: orderId, // Send order ID in more_info
-      customer: {
-        customer_name: customerName || "Guest",
-        email: customerEmail,
-        ...(customerPhone && { phone: customerPhone }),
-      },
     };
 
     console.log(
@@ -670,193 +599,99 @@ export const debugOrder = async (req, res) => {
 // @access  Public
 export const payPlusWebhook = async (req, res) => {
   try {
-    console.log("🔔 PayPlus Webhook received:");
-    console.log(JSON.stringify(req.body, null, 2));
+    const { eventType, data } = req.body;
 
-    const payload = req.body;
-
-    // ── 1. Extract transaction data ───────────────────────────────────────────
-    // PayPlus S2S: primary path is payload.transaction; fallback to root/data
-    const transaction = payload?.transaction ?? {};
-    const data = payload?.data ?? payload;
-
-    const transactionUid =
-      transaction?.uid ??
-      transaction?.transaction_uid ??
-      data?.transaction_uid ??
-      data?.transactionUid ??
-      payload?.transaction_uid ??
-      null;
-
-    const statusCode =
-      transaction?.status_code ??
-      data?.status_code ??
-      data?.status ??
-      payload?.status_code ??
-      payload?.status ??
-      null;
-
-    // more_info contains the local orderId we set when generating the link
-    const moreInfo =
-      transaction?.more_info ?? data?.more_info ?? payload?.more_info ?? null;
-
-    console.log("📌 transaction_uid:", transactionUid);
-    console.log("📌 status_code:", statusCode);
-    console.log("📌 more_info (local orderId):", moreInfo);
-
-    // ── 2. Check payment approval ─────────────────────────────────────────────
-    // PayPlus uses status_code "000" for success (1 / "1" kept for compat)
-    const isApproved =
-      statusCode === "000" ||
-      statusCode === 1 ||
-      statusCode === "1" ||
-      String(statusCode).toLowerCase() === "approved" ||
-      transaction?.transaction_status === "approved" ||
-      data?.transaction_status === "approved" ||
-      payload?.transaction_status === "approved";
-
-    if (!isApproved) {
-      console.warn(
-        `⚠️ Webhook ignored — payment not approved. status_code: ${statusCode}`,
-      );
-      return res.status(200).send("OK");
+    // Verify webhook signature
+    if (!data || !data.transactionId) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid webhook data",
+      });
     }
 
-    if (!transactionUid) {
-      console.error(
-        "❌ Webhook missing transaction_uid — cannot process order",
-      );
-      return res.status(200).send("OK");
+    // Handle different event types
+    switch (eventType) {
+      case "transaction.approved":
+        console.log("✅ PayPlus Payment Approved:", data.transactionId);
+        // Update order status to 'paid'
+        if (data.orderId) {
+          await Order.updatePaymentStatus(
+            data.orderId,
+            "completed",
+            data.transactionId,
+          );
+
+          // Send order confirmation emails after payment approval
+          try {
+            const order = await Order.findById(data.orderId);
+            if (order) {
+              const User = (await import("../models/User.js")).default;
+              const user = await User.findById(order.userId || order.user);
+
+              const orderEmailData = {
+                orderNumber: order.orderNumber,
+                items: order.items,
+                shippingAddress: order.shippingAddress,
+                itemsPrice: order.itemsPrice,
+                taxPrice: order.taxPrice,
+                shippingPrice: order.shippingPrice,
+                totalPrice: order.totalPrice,
+                paymentInfo: order.paymentInfo,
+                createdAt: order.createdAt,
+                userId: order.userId || order.user,
+                customerEmail: user?.email,
+              };
+
+              // Send invoice to customer
+              if (user?.email) {
+                await sendCustomerOrderInvoice(user.email, orderEmailData);
+                console.log(`✅ חשבונית נשלחה ללקוח: ${user.email}`);
+              }
+
+              // Send notification to business owner
+              await sendBusinessOwnerOrderNotification(orderEmailData);
+              console.log(`✅ התראה נשלחה לבעל העסק`);
+            }
+          } catch (emailError) {
+            console.error("❌ שגיאה בשליחת מיילים:", emailError.message);
+          }
+        }
+        break;
+
+      case "transaction.declined":
+        console.log("❌ PayPlus Payment Declined:", data.transactionId);
+        if (data.orderId) {
+          await Order.updatePaymentStatus(
+            data.orderId,
+            "failed",
+            data.transactionId,
+          );
+        }
+        break;
+
+      case "transaction.pending":
+        console.log("⏳ PayPlus Payment Pending:", data.transactionId);
+        if (data.orderId) {
+          await Order.updatePaymentStatus(
+            data.orderId,
+            "pending",
+            data.transactionId,
+          );
+        }
+        break;
+
+      default:
+        console.log(`Unhandled PayPlus event type: ${eventType}`);
     }
 
-    // ── 3. Extract customer details from payload ──────────────────────────────
-    const customer = data?.customer ?? {};
-    const customerName =
-      customer?.customer_name ?? customer?.name ?? data?.full_name ?? "לקוח";
-    const customerEmail = customer?.email ?? data?.email ?? "";
-    const customerPhone = customer?.phone ?? data?.phone ?? "";
-    const totalPrice = Number(data?.amount ?? data?.total_amount ?? 0);
-
-    // ── 4. Update existing order OR create a new one ──────────────────────────
-    let savedOrder = null;
-
-    // If more_info holds a local MongoDB orderId, upsert that document
-    if (moreInfo) {
-      console.log(`🔍 Looking for existing order with id: ${moreInfo}`);
-      const updated = await OrderMongo.findByIdAndUpdate(
-        moreInfo,
-        {
-          $set: {
-            paymentStatus: "completed",
-            status: "Paid",
-            transactionUid,
-            updatedAt: new Date(),
-          },
-        },
-        { new: true },
-      ).catch(() => null);
-
-      if (updated) {
-        savedOrder = updated;
-        console.log(`Order saved to DB — id: ${savedOrder._id}, status: Paid`);
-      } else {
-        console.warn(
-          `⚠️ No order found for more_info: ${moreInfo} — will create new`,
-        );
-      }
-    }
-
-    // No existing order found (or no more_info) — create from webhook payload
-    if (!savedOrder) {
-      // Idempotency: skip if this transaction was already recorded
-      const duplicate = await OrderMongo.findOne({ transactionUid });
-      if (duplicate) {
-        console.log(
-          `ℹ️ Transaction ${transactionUid} already recorded as order ${duplicate._id} — skipping`,
-        );
-        return res.status(200).send("OK");
-      }
-
-      const rawItems = Array.isArray(data?.items) ? data.items : [];
-      const items =
-        rawItems.length > 0
-          ? rawItems.map((i) => ({
-              productId: i.product_uid ?? "",
-              name: i.name ?? "מוצר",
-              price: Number(i.price ?? 0),
-              quantity: Number(i.quantity ?? 1),
-              selectedOptions: {},
-            }))
-          : [
-              {
-                productId: "",
-                name: `הזמנה ${moreInfo ?? transactionUid}`,
-                price: totalPrice,
-                quantity: 1,
-                selectedOptions: {},
-              },
-            ];
-
-      const orderDataForCreate = {
-        customerName,
-        customerEmail,
-        customerPhone,
-        items,
-        shippingAddress: {
-          fullName: customerName,
-          address: customer?.address ?? "",
-          city: customer?.city ?? "",
-          zipCode: customer?.zip_code ?? "",
-        },
-        itemsPrice: totalPrice,
-        shippingPrice: 0,
-        totalPrice,
-      };
-
-      savedOrder = await Order.createFromPayment(
-        orderDataForCreate,
-        transactionUid,
-      );
-      console.log(
-        `✅ New order created from webhook — id: ${savedOrder._id ?? savedOrder.id}`,
-      );
-      console.log("Order saved to DB");
-    }
-
-    // ── 5. Auto-generate tax receipt (non-blocking) ───────────────────────────
-    autoGenerateInvoice(savedOrder, transactionUid);
-
-    // ── 6. Send confirmation emails (non-blocking) ────────────────────────────
-    const emailData = {
-      orderNumber: transactionUid,
-      items: savedOrder.items,
-      shippingAddress: savedOrder.shippingAddress,
-      itemsPrice: savedOrder.itemsPrice,
-      taxPrice: 0,
-      shippingPrice: 0,
-      totalPrice: savedOrder.totalPrice,
-      paymentInfo: {
-        method: "credit_card",
-        status: "completed",
-        transactionId: transactionUid,
-      },
-      createdAt: savedOrder.createdAt,
-      customerEmail,
-    };
-
-    Promise.all([
-      customerEmail
-        ? sendCustomerOrderInvoice(customerEmail, emailData)
-        : Promise.resolve(),
-      sendBusinessOwnerOrderNotification({ ...emailData, userId: "webhook" }),
-    ]).catch((err) => console.error("❌ Webhook email error:", err.message));
+    res.json({ success: true, received: true });
   } catch (error) {
-    console.error("❌ Webhook processing error:", error.message);
-    console.error(error.stack);
+    console.error("Webhook Error:", error.message);
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
-
-  // Always return 200 OK so PayPlus knows the webhook was received
-  return res.status(200).send("OK");
 };
 
 // @desc    Generate a PayPlus payment link (with initial_invoice: true)
@@ -871,12 +706,10 @@ export const generatePaymentLinkHandler = async (req, res) => {
       customerName,
       customerEmail,
       customerPhone,
-      orderId,
       moreInfo,
       items,
       successUrl,
       failureUrl,
-      couponCode,
     } = req.body;
 
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
@@ -885,70 +718,28 @@ export const generatePaymentLinkHandler = async (req, res) => {
         .json({ success: false, message: "amount חייב להיות מספר חיובי" });
     }
 
-    // ── Coupon validation (server-side) ──────────────────────────────────────
-    let discountPercent = 0;
-    let validatedCouponCode = null;
-
-    if (couponCode) {
-      const coupon = await CouponMongo.findOne({
-        code: couponCode.trim().toUpperCase(),
-        isActive: true,
-      });
-      if (!coupon) {
-        return res.status(400).json({
-          success: false,
-          message: "קוד קופון לא תקין או פג תוקף",
-        });
-      }
-      discountPercent = coupon.discountPercent;
-      validatedCouponCode = coupon.code;
-    }
-
-    // Apply discount to base amount
-    const baseAmount = Math.round(Number(amount) * 100) / 100;
-    const discountAmount =
-      discountPercent > 0
-        ? Math.round(baseAmount * (discountPercent / 100) * 100) / 100
-        : 0;
-    const finalAmount = Math.round((baseAmount - discountAmount) * 100) / 100;
-
-    if (discountPercent > 0) {
-      console.log(
-        `🎟️  Coupon "${validatedCouponCode}" → ${discountPercent}% off — ${baseAmount} → ${finalAmount} ILS`,
-      );
-    }
-
     const result = await generatePaymentLink({
-      amount: finalAmount,
+      amount: Number(amount),
       currency_code,
       description,
       customerName,
       customerEmail,
       customerPhone,
-      // Prefer orderId so the webhook can match back to the local order
-      moreInfo: orderId ?? moreInfo ?? "",
+      moreInfo,
       items: Array.isArray(items) ? items : [],
       successUrl,
       failureUrl,
       notifyUrl: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/payment/webhook`,
     });
 
-    return res.status(200).json({
+    res.json({
       success: true,
-      payment_page_link: result.paymentPageUrl,
       paymentPageUrl: result.paymentPageUrl,
       pageRequestUid: result.pageRequestUid,
-      finalAmount,
-      discountPercent,
-      couponCode: validatedCouponCode,
     });
   } catch (error) {
     console.error("❌ generatePaymentLinkHandler:", error.message);
-    return res.status(500).json({
-      success: false,
-      error: "Failed to create payment page",
-      message: error.message,
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -988,14 +779,14 @@ export const createDocumentHandler = async (req, res) => {
 
     // Normalize vatType: accept legacy numbers (0/1) or correct string enums
     const vatTypeMap = {
-      0: "Vat-type-not-included",
-      1: "Vat-type-included",
-      2: "Vat-type-exempt",
+      0: "vat-type-not-included",
+      1: "vat-type-included",
+      2: "vat-type-exempt",
     };
     const normalizedVatType =
       typeof vatType === "number"
-        ? (vatTypeMap[vatType] ?? "Vat-type-included")
-        : (vatType ?? "Vat-type-included");
+        ? (vatTypeMap[vatType] ?? "vat-type-included")
+        : (vatType ?? "vat-type-included");
 
     const result = await createManualDocument(docType, {
       customer,

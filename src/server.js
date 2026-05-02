@@ -12,12 +12,10 @@ import userRoutes from "./routes/userRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
-// import smtpRoutes from "./routes/stmpRoutes.js";
+import smtpRoutes from "./routes/stmpRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import emailRoutes from "./routes/emailRoutes.js";
-import newsletterRoutes from "./routes/newsletterRoutes.js";
-import couponRoutes from "./routes/couponRoutes.js";
 import Device from "./models/Device.js";
 
 // Load env vars
@@ -114,19 +112,16 @@ app.use("/api/users", userRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/payment", paymentRoutes);
-app.use("/api/payplus", paymentRoutes);
 app.use("/api/contact", contactRoutes);
-// app.use("/api/smtp", smtpRoutes);
+app.use("/api/smtp", smtpRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/email", emailRoutes);
-app.use("/api/newsletter", newsletterRoutes);
-app.use("/api/coupons", couponRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({
     success: true,
-    message: "Shamaim VeEretz API is running",
+    message: "Shamayim VaAretz API is running",
     timestamp: new Date().toISOString(),
   });
 });
@@ -135,7 +130,7 @@ app.get("/api/health", (req, res) => {
 app.get("/", (req, res) => {
   res.json({
     success: true,
-    message: "Welcome to Shamaim VeEretz API",
+    message: "Welcome to Shamayim VaAretz API",
     version: "1.0.0",
     endpoints: {
       auth: "/api/auth",
@@ -155,7 +150,7 @@ const server = app.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
-║          🌟 שמים וארץ - Shamaim VeEretz 🌟            ║
+║          🌟 שמיים וארץ - Shamayim VaAretz 🌟            ║
 ║                                                           ║
 ║   Server running in ${process.env.NODE_ENV || "development"} mode                  ║
 ║   Port: ${PORT}                                           ║

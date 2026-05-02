@@ -11,7 +11,6 @@ const payPlusAPI = axios.create({
 });
 
 // Set Authorization at request time (after dotenv.config() has run)
-// PayPlus requires the exact key names "API Key" and "Secret Key" in the JSON object.
 payPlusAPI.interceptors.request.use((config) => {
   config.headers.Authorization = JSON.stringify({
     api_key: process.env.PAYPLUS_PUBLIC_KEY,
@@ -75,11 +74,14 @@ export const generatePaymentLink = async ({
     const payload = {
       payment_page_uid: process.env.PAYPLUS_PAYMENT_PAGE_UID,
       charge_method: 1, // 1 = charge only
-      amount_pay: amount,
+      amount,
       currency_code,
       sendEmailApproval: true,
       sendEmailFailure: false,
+      // Triggers automatic invoice generation by PayPlus (requires invoice company
+      // to be integrated and activated in payment page settings)
       initial_invoice: true,
+      // Ensure VAT is included in the invoice
       paying_vat: true,
       more_info: moreInfo,
       ...(description && { description }),
@@ -91,6 +93,14 @@ export const generatePaymentLink = async ({
         email: customerEmail,
         phone: customerPhone,
       },
+      // Line items on invoice (name only required; product_uid optional for catalog products)
+      ...(items.length > 0 && {
+        items: items.map((item) => ({
+          name: item.name,
+          quantity: item.quantity ?? 1,
+          price: item.price,
+        })),
+      }),
     };
 
     console.log("📤 generatePaymentLink →", JSON.stringify(payload, null, 2));
@@ -135,11 +145,9 @@ export const generatePaymentLink = async ({
 /**
  * Create a fiscal document manually via PayPlus Books API.
  *
- * @param {string} docType  - Document type key (per PayPlus docs):
- *   "inv_tax_receipt" | "inv_tax" | "inv_receipt" | "inv_proforma" |
- *   "inv_refund"      | "inv_don_receipt" | "inv_pay_request" |
- *   "crt_delivery"    | "crt_return" | "order_purchase" |
- *   "certificatepurchase" | "dc_quote"
+ * @param {string} docType  - Document type key:
+ *   "inv_tax_receipt" | "inv_proforma" | "inv_receipt" | "inv_tax" |
+ *   "inv_order"       | "inv_refund"   | "inv_delivery"
  *
  * @param {Object} options
  * @param {Object}   options.customer              - { name, email, phone?, address? }
@@ -148,12 +156,10 @@ export const generatePaymentLink = async ({
  *   paymentMethod: 1=cash 2=check 3=bank-transfer 4=credit-card 5=other
  * @param {number}   options.totalAmount           - Grand total (including VAT)
  * @param {string}   [options.currency_code]       - Default "ILS"
- * @param {string}   [options.vatType]             - "vat-type-included" | "vat-type-not-included" | "vat-type-exempt"
- * @param {string}   [options.remarks]             - Optional free-text remarks (more_info)
+ * @param {string}   [options.vatType]             - PayPlus string enum (default "vat-type-included"):
+ *   "vat-type-included" | "vat-type-not-included" | "vat-type-exempt"
+ * @param {string}   [options.remarks]             - Optional free-text remarks
  * @param {boolean}  [options.sendEmail]           - Email the document to customer (default true)
- * @param {string}   [options.transactionUid]      - Link to an existing PayPlus transaction UUID
- * @param {string}   [options.language]            - Document language: "He" (default) | "En"
- * @param {string}   [options.doc_date]            - Document date YYYY-MM-DD (defaults to today)
  * @returns {Promise<Object>} PayPlus Books API response
  */
 export const createManualDocument = async (
@@ -164,33 +170,25 @@ export const createManualDocument = async (
     payments = [],
     totalAmount,
     currency_code = "ILS",
-    vatType = "Vat-type-included",
+    vatType = "vat-type-included", // PayPlus string enum — NOT a number
     remarks = "",
     sendEmail = true,
-    transactionUid = null,
-    language = "He",
-    doc_date = null,
   },
 ) => {
   const VALID_DOC_TYPES = [
     "inv_tax_receipt",
-    "inv_tax",
-    "inv_receipt",
     "inv_proforma",
+    "inv_receipt",
+    "inv_tax",
+    "inv_order",
     "inv_refund",
-    "inv_don_receipt",
-    "inv_pay_request",
-    "crt_delivery",
-    "crt_return",
-    "order_purchase",
-    "certificatepurchase",
-    "dc_quote",
+    "inv_delivery",
   ];
 
   const VALID_VAT_TYPES = [
-    "Vat-type-included",
-    "Vat-type-not-included",
-    "Vat-type-exempt",
+    "vat-type-included",
+    "vat-type-not-included",
+    "vat-type-exempt",
   ];
 
   if (!VALID_DOC_TYPES.includes(docType)) {
@@ -210,10 +208,7 @@ export const createManualDocument = async (
     throw new Error("items array is required and must not be empty");
   if (totalAmount == null) throw new Error("totalAmount is required");
 
-  const today = new Date().toISOString().slice(0, 10);
-
   const payload = {
-    doc_date: doc_date || today,
     customer: {
       name: customer.name,
       email: customer.email || "",
@@ -229,10 +224,8 @@ export const createManualDocument = async (
       payments.length > 0 ? payments : [{ paymentMethod: 4, sum: totalAmount }], // default: credit card
     totalAmount,
     currency_code,
-    vatType,
-    language,
-    send_document_email: sendEmail,
-    ...(transactionUid && { Transaction_uuid: transactionUid }),
+    vatType, // string enum: "vat-type-included" | "vat-type-not-included" | "vat-type-exempt"
+    send_document_email: sendEmail, // email the document to the customer
     ...(remarks && { more_info: remarks }),
   };
 
@@ -311,35 +304,6 @@ export const refundTransaction = async (transactionId, amount = null) => {
  */
 export const generatePaymentURL = (transactionData) => {
   return transactionData.url || transactionData.paymentUrl;
-};
-
-/**
- * Verify a PayPlus payment by payment_page_request_uid (server-side only).
- * Use this instead of letting the frontend call PayPlus directly.
- *
- * @param {string} paymentPageRequestUid
- * @returns {Promise<Object>} PayPlus transaction data
- */
-export const getTransactionByPageRequestUid = async (paymentPageRequestUid) => {
-  try {
-    const response = await payPlusAPI.post(
-      "/transaction/transactionDataByPaymentPageRequestUid",
-      { payment_page_request_uid: paymentPageRequestUid },
-    );
-    return response.data;
-  } catch (error) {
-    const detail = error.response?.data ?? error.message;
-    console.error(
-      "❌ getTransactionByPageRequestUid error:",
-      JSON.stringify(detail),
-    );
-    throw new Error(
-      error.response?.data?.results?.message ||
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to verify transaction with PayPlus",
-    );
-  }
 };
 
 export default payPlusAPI;
