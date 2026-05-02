@@ -109,11 +109,18 @@ export const createPaymentIntent = async (req, res) => {
           }))
         : [{ name: "General Jewelry", quantity: 1, price: req.body.amount }];
 
+    // Derive total directly from items so PayPlus never rejects with
+    // "global-price-is-not-equal-to-total-items-sum" due to coupon rounding
+    const calculatedTotal = formattedItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    );
+
     // Format payload according to PayPlus API spec
     const paymentPayload = {
       payment_page_uid: process.env.PAYPLUS_MERCHANT_ID || "shmimveeretz.com", // Your payment page UID
       charge_method: 1, // 1 = charge only (תשלום בלבד)
-      amount: Math.round(amount * 100) / 100, // Amount in shekels
+      amount: Math.round(calculatedTotal * 100) / 100, // Derived from items — guaranteed to match
       currency_code: currency,
       items: formattedItems,
       sendEmailApproval: true,
