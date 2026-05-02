@@ -7,6 +7,13 @@ class ProductModel {
 
   _formatProduct(product) {
     if (!product) return null;
+
+    // Compose a nested priceAdditions object from the separate option-map fields.
+    // Each key becomes a dropdown group in the frontend; its value is { optionName: priceAddition }.
+    const priceAdditions = {};
+    if (product.metalType) priceAdditions.metalType = product.metalType;
+    if (product.length) priceAdditions.length = product.length;
+
     return {
       id: product.id,
       name: product.name,
@@ -14,7 +21,7 @@ class ProductModel {
       letter: product.letter,
       category: product.category,
       price: product.price,
-      priceAdditions: product.priceAdditions,
+      priceAdditions,
       metalType: product.metalType,
       length: product.length,
       metals: product.metals,
