@@ -5,6 +5,7 @@ import {
   getTransactionByPageRequestUid,
   createManualDocument,
 } from "../utils/payPlusAPI.js";
+import { sendBusinessOwnerOrderNotification } from "../utils/emailService.js";
 
 // @desc    Get all orders
 // @route   GET /api/orders
@@ -490,6 +491,39 @@ export const verifyTransaction = async (req, res) => {
 
     console.log(
       `✅ Transaction verified & order saved — id: ${newOrder._id}, uid: ${paymentPageRequestUid}`,
+    );
+
+    // Notify business owner (non-blocking — never fails the response)
+    sendBusinessOwnerOrderNotification({
+      orderNumber: newOrder._id.toString(),
+      items: items.map((i) => ({
+        productId: i.productId || "",
+        name: i.name,
+        price: i.price,
+        quantity: i.quantity ?? 1,
+        selectedOptions: i.selectedOptions || {},
+      })),
+      shippingAddress: {
+        name: newOrder.shippingAddress?.fullName || customerName,
+        phone: customerPhone,
+        street: newOrder.shippingAddress?.address || "",
+        city: newOrder.shippingAddress?.city || "",
+        zipCode: newOrder.shippingAddress?.zipCode || "",
+        country: "ישראל",
+      },
+      itemsPrice: newOrder.itemsPrice,
+      taxPrice: 0,
+      shippingPrice: newOrder.shippingPrice,
+      totalPrice,
+      paymentInfo: {
+        method: "credit_card",
+        transactionId: paymentPageRequestUid,
+      },
+      createdAt: newOrder.createdAt,
+      userId: req.user?.id || null,
+      customerEmail,
+    }).catch((err) =>
+      console.error("❌ Admin order notification failed:", err.message),
     );
 
     return res.status(200).json({

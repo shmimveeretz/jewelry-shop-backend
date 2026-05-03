@@ -1,6 +1,8 @@
 import axios from "axios";
 import Order from "../models/Order.js";
 import OrderMongo from "../models/OrderMongo.js";
+import UserMongo from "../models/UserMongo.js";
+import PendingOrderMongo from "../models/PendingOrderMongo.js";
 import Product from "../models/Product.js";
 import {
   sendCustomerOrderInvoice,
@@ -10,6 +12,7 @@ import {
   createPayPlusTransaction,
   generatePaymentLink,
   createManualDocument,
+  getTransactionByPageRequestUid,
 } from "../utils/payPlusAPI.js";
 
 // @desc    Verify PayPlus payment and save order to DB
@@ -162,20 +165,53 @@ export const createPaymentIntent = async (req, res) => {
     console.log("📥 PayPlus response:", JSON.stringify(response, null, 2));
 
     const paymentUrl = response?.data?.payment_page_link;
-    const transactionId = response?.data?.page_request_uid || orderId;
+    const pageRequestUid = response?.data?.page_request_uid || orderId;
 
-    if (paymentUrl) {
-      res.json({
-        success: true,
-        paymentPageUrl: paymentUrl,
-        transactionUid: transactionId,
-        orderId,
-      });
-    } else {
+    if (!paymentUrl) {
       throw new Error(
         `PayPlus - Invalid response format. Full: ${JSON.stringify(response)}`,
       );
     }
+
+    // Persist the pending order so the webhook can retrieve it
+    // even if the customer's browser never reaches the success page
+    if (pageRequestUid) {
+      PendingOrderMongo.create({
+        pageRequestUid,
+        orderData: {
+          customerName: customer.customer_name,
+          customerEmail: customer.email,
+          customerPhone: customer.phone,
+          items: (sourceItems || []).map((i) => ({
+            productId: i.productId || "",
+            name: i.name,
+            price: i.price,
+            quantity: i.quantity || 1,
+            selectedOptions: i.selectedOptions || {},
+          })),
+          shippingAddress: {
+            fullName: customer.customer_name,
+            address: shippingAddress?.street || shippingAddress?.address || "",
+            city: shippingAddress?.city || "",
+            zipCode: shippingAddress?.zipCode || "",
+          },
+          itemsPrice: req.body.itemsPrice ?? calculatedTotal,
+          shippingPrice: req.body.shippingPrice ?? 0,
+          totalPrice: req.body.totalPrice ?? calculatedTotal,
+          couponCode: req.body.couponCode || null,
+          discountPercent: Number(req.body.discountPercent) || 0,
+        },
+      }).catch((err) =>
+        console.error("❌ PendingOrder save error:", err.message),
+      );
+    }
+
+    res.json({
+      success: true,
+      paymentPageUrl: paymentUrl,
+      transactionUid: pageRequestUid,
+      orderId,
+    });
   } catch (error) {
     console.error("PayPlus Error:", error.response?.data || error.message);
     res.status(500).json({
@@ -625,100 +661,168 @@ export const debugOrder = async (req, res) => {
 // @desc    Handle PayPlus webhook
 // @route   POST /apiwebhook
 // @access  Public
+/**
+ * @desc  PayPlus server-to-server callback — saves the order even if the
+ *        customer's browser never reaches the success page.
+ * @route POST /api/payment/webhook
+ * @access Public (called by PayPlus, not by the customer)
+ *
+ * PayPlus POSTs the transaction result to refURL_callback after the customer
+ * pays.  The exact body shape varies by gateway version; we read all common
+ * field names defensively.
+ */
 export const payPlusWebhook = async (req, res) => {
   try {
-    const { eventType, data } = req.body;
+    // Accept both JSON body and query-string (PayPlus may send either)
+    const payload = { ...req.query, ...req.body };
 
-    // Verify webhook signature
-    if (!data || !data.transactionId) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid webhook data",
-      });
-    }
+    const pageRequestUid =
+      payload.page_request_uid ||
+      payload.pageRequestUid ||
+      payload.page_request_uid;
 
-    // Handle different event types
-    switch (eventType) {
-      case "transaction.approved":
-        console.log("✅ PayPlus Payment Approved:", data.transactionId);
-        // Update order status to 'paid'
-        if (data.orderId) {
-          await Order.updatePaymentStatus(
-            data.orderId,
-            "completed",
-            data.transactionId,
-          );
+    const transactionUid =
+      payload.transaction_uid || payload.transactionUid || payload.uid;
 
-          // Send order confirmation emails after payment approval
-          try {
-            const order = await Order.findById(data.orderId);
-            if (order) {
-              const User = (await import("../models/User.js")).default;
-              const user = await User.findById(order.userId || order.user);
-
-              const orderEmailData = {
-                orderNumber: order.orderNumber,
-                items: order.items,
-                shippingAddress: order.shippingAddress,
-                itemsPrice: order.itemsPrice,
-                taxPrice: order.taxPrice,
-                shippingPrice: order.shippingPrice,
-                totalPrice: order.totalPrice,
-                paymentInfo: order.paymentInfo,
-                createdAt: order.createdAt,
-                userId: order.userId || order.user,
-                customerEmail: user?.email,
-              };
-
-              // Send invoice to customer
-              if (user?.email) {
-                await sendCustomerOrderInvoice(user.email, orderEmailData);
-                console.log(`✅ חשבונית נשלחה ללקוח: ${user.email}`);
-              }
-
-              // Send notification to business owner
-              await sendBusinessOwnerOrderNotification(orderEmailData);
-              console.log(`✅ התראה נשלחה לבעל העסק`);
-            }
-          } catch (emailError) {
-            console.error("❌ שגיאה בשליחת מיילים:", emailError.message);
-          }
-        }
-        break;
-
-      case "transaction.declined":
-        console.log("❌ PayPlus Payment Declined:", data.transactionId);
-        if (data.orderId) {
-          await Order.updatePaymentStatus(
-            data.orderId,
-            "failed",
-            data.transactionId,
-          );
-        }
-        break;
-
-      case "transaction.pending":
-        console.log("⏳ PayPlus Payment Pending:", data.transactionId);
-        if (data.orderId) {
-          await Order.updatePaymentStatus(
-            data.orderId,
-            "pending",
-            data.transactionId,
-          );
-        }
-        break;
-
-      default:
-        console.log(`Unhandled PayPlus event type: ${eventType}`);
-    }
-
+    // Acknowledge immediately — PayPlus expects a fast 200
     res.json({ success: true, received: true });
-  } catch (error) {
-    console.error("Webhook Error:", error.message);
-    res.status(400).json({
-      success: false,
-      message: error.message,
+
+    if (!pageRequestUid) {
+      console.warn(
+        "⚠️ PayPlus webhook: no page_request_uid in payload",
+        payload,
+      );
+      return;
+    }
+
+    // Idempotency — if the browser already saved this order, skip
+    const alreadySaved = await OrderMongo.findOne({
+      transactionUid: { $in: [pageRequestUid, transactionUid].filter(Boolean) },
     });
+    if (alreadySaved) {
+      console.log(`ℹ️ Webhook: order already saved for ${pageRequestUid}`);
+      return;
+    }
+
+    // Verify the payment server-side (don't trust the webhook payload alone)
+    let payPlusData;
+    try {
+      payPlusData = await getTransactionByPageRequestUid(pageRequestUid);
+    } catch (err) {
+      console.error("❌ Webhook PayPlus verify failed:", err.message);
+      return;
+    }
+
+    const txStatus =
+      payPlusData?.results?.status ?? payPlusData?.data?.status ?? null;
+    const isApproved =
+      txStatus === 1 ||
+      txStatus === "1" ||
+      txStatus === "approved" ||
+      payPlusData?.data?.payment_status === "completed";
+
+    if (!isApproved) {
+      console.warn(
+        `⚠️ Webhook: transaction ${pageRequestUid} not approved. Status: ${txStatus}`,
+      );
+      return;
+    }
+
+    // Look up the pending order we saved when generating the payment link
+    const pendingDoc = await PendingOrderMongo.findOne({ pageRequestUid });
+    const orderData = pendingDoc?.orderData ?? {};
+
+    const txData = payPlusData?.data ?? {};
+    const customerName =
+      orderData.customerName ||
+      txData.customer_name ||
+      txData.full_name ||
+      "לקוח";
+    const customerEmail =
+      orderData.customerEmail || txData.email || txData.customer_email || "";
+    const customerPhone =
+      orderData.customerPhone || txData.phone || txData.customer_phone || "";
+    const totalPrice =
+      orderData.totalPrice ??
+      orderData.totalAmount ??
+      Number(txData.amount) ??
+      0;
+
+    const items =
+      orderData.items ??
+      (txData.items || []).map((i) => ({
+        productId: i.product_uid || "",
+        name: i.name,
+        price: Number(i.price),
+        quantity: Number(i.quantity) || 1,
+        selectedOptions: {},
+      }));
+
+    const newOrder = await OrderMongo.create({
+      customerName,
+      customerEmail,
+      customerPhone,
+      items,
+      shippingAddress: {
+        fullName: orderData.shippingAddress?.fullName || customerName,
+        address: orderData.shippingAddress?.address || "",
+        city: orderData.shippingAddress?.city || "",
+        zipCode: orderData.shippingAddress?.zipCode || "",
+      },
+      itemsPrice: Number(orderData.itemsPrice) || 0,
+      shippingPrice: Number(orderData.shippingPrice) || 0,
+      totalPrice: Number(totalPrice),
+      couponCode: orderData.couponCode || null,
+      discountPercent: Number(orderData.discountPercent) || 0,
+      paymentStatus: "completed",
+      transactionUid: pageRequestUid,
+      status: "Pending",
+    });
+
+    console.log(
+      `✅ Webhook: order saved — id: ${newOrder._id}, uid: ${pageRequestUid}`,
+    );
+
+    // Clean up pending order (best-effort)
+    if (pendingDoc) {
+      pendingDoc.deleteOne().catch(() => {});
+    }
+
+    // Admin notification (non-blocking)
+    sendBusinessOwnerOrderNotification({
+      orderNumber: newOrder._id.toString(),
+      items: items.map((i) => ({
+        productId: i.productId || "",
+        name: i.name,
+        price: i.price,
+        quantity: i.quantity ?? 1,
+        selectedOptions: i.selectedOptions || {},
+      })),
+      shippingAddress: {
+        name: newOrder.shippingAddress?.fullName || customerName,
+        phone: customerPhone,
+        street: newOrder.shippingAddress?.address || "",
+        city: newOrder.shippingAddress?.city || "",
+        zipCode: newOrder.shippingAddress?.zipCode || "",
+        country: "ישראל",
+      },
+      itemsPrice: newOrder.itemsPrice,
+      taxPrice: 0,
+      shippingPrice: newOrder.shippingPrice,
+      totalPrice,
+      paymentInfo: {
+        method: "credit_card",
+        transactionId: pageRequestUid,
+      },
+      createdAt: newOrder.createdAt,
+      userId: null,
+      customerEmail,
+    }).catch((err) =>
+      console.error("❌ Webhook admin notification failed:", err.message),
+    );
+  } catch (error) {
+    console.error("❌ Webhook Error:", error.message);
+    // Response already sent above; just log
   }
 };
 
