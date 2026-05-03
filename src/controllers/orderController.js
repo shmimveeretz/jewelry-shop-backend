@@ -536,3 +536,40 @@ export const verifyTransaction = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// @desc    Save full order from frontend localStorage after successful payment
+// @route   POST /api/orders/create-from-payment
+// @access  Public (optionalProtect — supports guests)
+export const createFromPayment = async (req, res) => {
+  try {
+    const { transactionUid } = req.body;
+
+    if (!transactionUid) {
+      return res.status(400).json({
+        success: false,
+        message: "transactionUid הוא שדה חובה",
+      });
+    }
+
+    // Idempotency — don't save the same transaction twice
+    const existing = await OrderMongo.findOne({ transactionUid });
+    if (existing) {
+      return res.json({
+        success: true,
+        data: existing,
+        message: "הזמנה כבר קיימת במערכת",
+      });
+    }
+
+    const order = await Order.createFromPayment(req.body, transactionUid);
+
+    console.log(
+      `✅ createFromPayment: order saved — id: ${order._id ?? order.id}, uid: ${transactionUid}`,
+    );
+
+    return res.status(201).json({ success: true, data: order });
+  } catch (error) {
+    console.error("❌ createFromPayment Error:", error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

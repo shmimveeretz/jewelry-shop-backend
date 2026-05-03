@@ -7,6 +7,7 @@ import {
   deleteOrder,
   orderSuccess,
   verifyTransaction,
+  createFromPayment,
 } from "../controllers/orderController.js";
 import { generatePaymentLinkHandler } from "../controllers/paymentController.js";
 import { protect, admin, optionalProtect } from "../middleware/auth.js";
@@ -18,6 +19,9 @@ router.post("/create-payment", optionalProtect, generatePaymentLinkHandler);
 
 // Verify PayPlus payment server-side and save order — SECURITY: keeps API keys off the frontend
 router.post("/verify-transaction", optionalProtect, verifyTransaction);
+
+// Save full order from frontend localStorage after PayPlus redirects back
+router.post("/create-from-payment", optionalProtect, createFromPayment);
 
 // Order success callback — called by frontend after payment gateway confirms payment
 router.post("/success", optionalProtect, orderSuccess);
