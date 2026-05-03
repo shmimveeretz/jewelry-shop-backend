@@ -2,6 +2,7 @@ import axios from "axios";
 import Order from "../models/Order.js";
 import OrderMongo from "../models/OrderMongo.js";
 import UserMongo from "../models/UserMongo.js";
+import PendingOrderMongo from "../models/PendingOrderMongo.js";
 import Product from "../models/Product.js";
 import {
   sendCustomerOrderInvoice,
@@ -11,6 +12,7 @@ import {
   createPayPlusTransaction,
   generatePaymentLink,
   createManualDocument,
+  getTransactionByPageRequestUid,
 } from "../utils/payPlusAPI.js";
 
 // @desc    Verify PayPlus payment and save order to DB
@@ -656,16 +658,20 @@ export const debugOrder = async (req, res) => {
   }
 };
 
-// @desc    Handle PayPlus webhook
+// @desc    Handle PayPlus server-to-server callback
 // @route   POST /api/payment/webhook
-// @access  Public (called by PayPlus server-to-server)
+// @access  Public (called by PayPlus, never by the browser)
 //
-// Architecture note: The webhook only acknowledges the payment and logs it.
-// Full order creation (Order.createFromPayment) is handled by the frontend
-// "Thank You" page calling GET /api/payment/verify/:transactionUid,
-// because the webhook payload does not contain the full cart details.
+// PayPlus POSTs here after every transaction attempt.
+// We respond 200 immediately (otherwise PayPlus retries), then
+// save the order asynchronously using the PendingOrder we stored
+// when the payment link was created.
 export const payPlusWebhook = async (req, res) => {
+  // Respond immediately — PayPlus requires a fast 200
+  res.status(200).send("OK");
+
   try {
+    // PayPlus wraps the data in a `transaction` key in newer versions
     const transaction = req.body?.transaction ?? req.body ?? {};
 
     const pageRequestUid =
@@ -677,22 +683,127 @@ export const payPlusWebhook = async (req, res) => {
     const isApproved = statusCode === "000";
 
     console.log("📩 PayPlus Webhook received:");
-    console.log("  payment_page_request_uid:", pageRequestUid);
-    console.log("  status_code:", statusCode);
-    console.log("  approved:", isApproved);
-    console.log("  more_info:", transaction.more_info ?? null);
+    console.log("  page_request_uid:", pageRequestUid);
+    console.log("  status_code:", statusCode, "| approved:", isApproved);
 
     if (!isApproved) {
-      console.warn(
-        `⚠️ Webhook: transaction not approved — status_code: ${statusCode}`,
-      );
+      console.warn(`⚠️ Webhook: not approved — status_code: ${statusCode}`);
+      return;
     }
 
-    // Always return 200 so PayPlus does not retry
-    return res.status(200).send("OK");
+    if (!pageRequestUid) {
+      console.warn("⚠️ Webhook: no page_request_uid in payload", req.body);
+      return;
+    }
+
+    // Idempotency — skip if browser already saved the order
+    const existing = await OrderMongo.findOne({
+      transactionUid: pageRequestUid,
+    });
+    if (existing) {
+      console.log(`ℹ️ Webhook: order already exists for ${pageRequestUid}`);
+      return;
+    }
+
+    // Retrieve the pending order we stored before redirecting to PayPlus
+    const pendingDoc = await PendingOrderMongo.findOne({ pageRequestUid });
+    const orderData = pendingDoc?.orderData ?? {};
+
+    // Fall back to data in the webhook payload if pendingOrder is missing
+    const customerName =
+      orderData.customerName ||
+      transaction.customer_name ||
+      transaction.full_name ||
+      "לקוח";
+    const customerEmail =
+      orderData.customerEmail ||
+      transaction.email ||
+      transaction.customer_email ||
+      "";
+    const customerPhone =
+      orderData.customerPhone ||
+      transaction.phone ||
+      transaction.customer_phone ||
+      "";
+    const totalPrice =
+      orderData.totalPrice ??
+      orderData.totalAmount ??
+      Number(transaction.amount) ??
+      0;
+
+    const items =
+      orderData.items ??
+      (transaction.items || []).map((i) => ({
+        productId: "",
+        name: i.name,
+        price: Number(i.price),
+        quantity: Number(i.quantity) || 1,
+        selectedOptions: {},
+      }));
+
+    const newOrder = await OrderMongo.create({
+      customerName,
+      customerEmail,
+      customerPhone,
+      items,
+      shippingAddress: {
+        fullName: orderData.shippingAddress?.fullName || customerName,
+        address: orderData.shippingAddress?.address || "",
+        city: orderData.shippingAddress?.city || "",
+        zipCode: orderData.shippingAddress?.zipCode || "",
+      },
+      itemsPrice: Number(orderData.itemsPrice) || 0,
+      shippingPrice: Number(orderData.shippingPrice) || 0,
+      totalPrice: Number(totalPrice),
+      couponCode: orderData.couponCode || null,
+      discountPercent: Number(orderData.discountPercent) || 0,
+      paymentStatus: "completed",
+      transactionUid: pageRequestUid,
+      status: "Pending",
+    });
+
+    console.log(
+      `✅ Webhook: order saved — id: ${newOrder._id}, uid: ${pageRequestUid}`,
+    );
+
+    // Clean up pending order (best-effort)
+    pendingDoc?.deleteOne().catch(() => {});
+
+    // Admin notification (non-blocking)
+    sendBusinessOwnerOrderNotification({
+      orderNumber: newOrder._id.toString(),
+      items: items.map((i) => ({
+        productId: i.productId || "",
+        name: i.name,
+        price: i.price,
+        quantity: i.quantity ?? 1,
+        selectedOptions: i.selectedOptions || {},
+      })),
+      shippingAddress: {
+        name: newOrder.shippingAddress?.fullName || customerName,
+        phone: customerPhone,
+        street: newOrder.shippingAddress?.address || "",
+        city: newOrder.shippingAddress?.city || "",
+        zipCode: newOrder.shippingAddress?.zipCode || "",
+        country: "ישראל",
+      },
+      itemsPrice: newOrder.itemsPrice,
+      taxPrice: 0,
+      shippingPrice: newOrder.shippingPrice,
+      totalPrice,
+      paymentInfo: {
+        method: "credit_card",
+        transactionId: pageRequestUid,
+      },
+      createdAt: newOrder.createdAt,
+      userId: null,
+      customerEmail,
+    }).catch((err) =>
+      console.error("❌ Webhook admin notification failed:", err.message),
+    );
   } catch (error) {
-    console.error("❌ Webhook Error:", error.message);
-    return res.status(200).send("OK"); // Still 200 to prevent PayPlus retries
+    console.error("❌ Webhook processing error:", error.message);
+    // Response already sent — just log
   }
 };
 
