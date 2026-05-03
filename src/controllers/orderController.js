@@ -150,16 +150,20 @@ export const updateOrderStatus = async (req, res) => {
       });
     }
 
-    if (
-      ![
-        "Pending",
-        "Paid",
-        "Processing",
-        "Shipped",
-        "Delivered",
-        "Cancelled",
-      ].includes(status)
-    ) {
+    const validStatuses = [
+      "Pending",
+      "Paid",
+      "Processing",
+      "Shipped",
+      "Delivered",
+      "Cancelled",
+    ];
+
+    // Normalize to Title Case to match the Mongoose schema enum
+    const normalizedStatus =
+      status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+
+    if (!validStatuses.includes(normalizedStatus)) {
       return res.status(400).json({
         success: false,
         message:
@@ -167,7 +171,7 @@ export const updateOrderStatus = async (req, res) => {
       });
     }
 
-    const updatedOrder = await Order.updateStatus(id, status);
+    const updatedOrder = await Order.updateStatus(id, normalizedStatus);
     if (!updatedOrder) {
       return res.status(404).json({
         success: false,
@@ -321,7 +325,7 @@ export const deleteOrder = async (req, res) => {
 
     console.log("🗑️ Delete Order:", id);
 
-    const deleted = await Order.delete(id);
+    const deleted = await OrderMongo.findByIdAndDelete(id);
     if (!deleted) {
       return res.status(404).json({
         success: false,
@@ -329,11 +333,11 @@ export const deleteOrder = async (req, res) => {
       });
     }
 
-    console.log("✅ Order deleted");
+    console.log("✅ Order deleted:", id);
 
     res.json({
       success: true,
-      message: "הזמנה נמחקה בהצלחה",
+      message: "Order deleted successfully",
     });
   } catch (error) {
     console.error("❌ Error deleting order:", error);
