@@ -1,11 +1,17 @@
 import Order from "../models/Order.js";
 import OrderMongo from "../models/OrderMongo.js";
 import UserMongo from "../models/UserMongo.js";
+import ProductMongo from "../models/ProductMongo.js";
 import {
   getTransactionByPageRequestUid,
   createManualDocument,
 } from "../utils/payPlusAPI.js";
 import { sendBusinessOwnerOrderNotification } from "../utils/emailService.js";
+import {
+  normalizeExtraHebrewLetters,
+  isValidHebrewLetter,
+  getExtraLetterPerBraceletCost,
+} from "../utils/extraHebrewLetters.js";
 
 // @desc    Get all orders
 // @route   GET /api/orders
@@ -541,6 +547,40 @@ export const verifyTransaction = async (req, res) => {
   }
 };
 
+// @desc    Get coupon usage stats (aggregation)
+// @route   GET /api/orders/coupon-stats
+// @access  Private/Admin
+export const getCouponStats = async (req, res) => {
+  try {
+    console.log("📊 Coupon Stats Request");
+
+    const stats = await OrderMongo.aggregate([
+      { $match: { couponCode: { $nin: [null, ""] } } },
+      {
+        $group: {
+          _id: "$couponCode",
+          usageCount: { $sum: 1 },
+          totalRevenue: { $sum: "$totalPrice" },
+        },
+      },
+      { $sort: { totalRevenue: -1 } },
+      {
+        $project: {
+          _id: 0,
+          couponCode: "$_id",
+          usageCount: 1,
+          totalRevenue: 1,
+        },
+      },
+    ]);
+
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    console.error("❌ Error fetching coupon stats:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Save full order from frontend localStorage after successful payment
 // @route   POST /api/orders/create-from-payment
 // @access  Public (optionalProtect — supports guests)
@@ -574,6 +614,119 @@ export const createFromPayment = async (req, res) => {
     return res.status(201).json({ success: true, data: order });
   } catch (error) {
     console.error("❌ createFromPayment Error:", error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Validate a single cart item and calculate its price server-side.
+ *          Frontend prices are NEVER trusted — we re-compute from the DB.
+ * @route   POST /api/orders/cart/add
+ * @access  Public
+ *
+ * Expected body:
+ * {
+ *   "productId": "aleph",
+ *   "quantity": 1,
+ *   "selections": {
+ *     "metalType": "זהב 14 קראט",
+ *     "length": "45",
+ *     "jewelryType": "צמיד",
+ *     "extraLetters": ["ב", "ג", "ד"]
+ *   }
+ * }
+ */
+export const addToCart = async (req, res) => {
+  try {
+    const { productId, quantity = 1, selections = {} } = req.body;
+
+    // ── Input validation ────────────────────────────────────────────────────
+    if (!productId || typeof productId !== "string") {
+      return res
+        .status(400)
+        .json({ success: false, message: "productId הוא שדה חובה" });
+    }
+
+    const parsedQty = Number(quantity);
+    if (!Number.isInteger(parsedQty) || parsedQty < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "quantity חייב להיות מספר שלם חיובי",
+      });
+    }
+
+    // ── Fetch product from DB ────────────────────────────────────────────────
+    const product = await ProductMongo.findOne({ id: productId });
+    if (!product) {
+      return res.status(404).json({ success: false, message: "מוצר לא נמצא" });
+    }
+
+    const {
+      metalType = "",
+      length = "",
+      jewelryType = "",
+      extraLetters = [],
+    } = selections;
+
+    if (!Array.isArray(extraLetters)) {
+      return res.status(400).json({
+        success: false,
+        message: "extraLetters חייב להיות מערך",
+      });
+    }
+
+    const normalizedExtraLetters = normalizeExtraHebrewLetters(extraLetters);
+
+    // ── Validate Hebrew letters ──────────────────────────────────────────────
+    const invalidLetters = normalizedExtraLetters.filter(
+      (l) => !isValidHebrewLetter(l),
+    );
+    if (invalidLetters.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `extraLetters מכיל תווים לא חוקיים: "${invalidLetters.join('", "')}". ניתן להשתמש באותיות עבריות בלבד (א–ת)`,
+      });
+    }
+
+    // ── Server-side price calculation ────────────────────────────────────────
+    const basePrice = product.price ?? 0;
+    const metalAddition = product.priceAdditions?.metalType?.[metalType] ?? 0;
+
+    let extraLettersCost = 0;
+    let sanitizedExtraLetters = [];
+
+    if (jewelryType === "צמיד") {
+      sanitizedExtraLetters = normalizedExtraLetters;
+      const perLetterCost = getExtraLetterPerBraceletCost(
+        product.priceAdditions,
+        metalType,
+      );
+      extraLettersCost = sanitizedExtraLetters.length * perLetterCost;
+    }
+    // For non-bracelet types, extraLetters is intentionally discarded
+
+    const unitPrice = basePrice + metalAddition + extraLettersCost;
+
+    const cartItem = {
+      productId: product.id,
+      name: product.name,
+      price: unitPrice,
+      quantity: parsedQty,
+      selections: {
+        metalType,
+        length,
+        jewelryType,
+        extraLetters: sanitizedExtraLetters,
+      },
+    };
+
+    console.log(
+      `🛒 addToCart: ${product.name} — unit price: ${unitPrice} ILS (base ${basePrice} + metal ${metalAddition} + letters ${extraLettersCost})`,
+    );
+
+    return res.status(200).json({ success: true, data: cartItem });
+  } catch (error) {
+    console.error("❌ addToCart Error:", error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };

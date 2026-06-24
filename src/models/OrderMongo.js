@@ -1,5 +1,17 @@
 import mongoose from "mongoose";
 
+// Inline selections schema (mirrors CartItemMongo.selectionsSchema)
+// Kept inline to avoid import side-effects in legacy code paths.
+const orderSelectionsSchema = new mongoose.Schema(
+  {
+    metalType: { type: String, default: "" },
+    length: { type: String, default: "" },
+    jewelryType: { type: String, default: "" },
+    extraLetters: { type: [String], default: [] },
+  },
+  { _id: false },
+);
+
 const OrderSchema = new mongoose.Schema(
   {
     // Legacy fields (kept for backward compat)
@@ -21,7 +33,10 @@ const OrderSchema = new mongoose.Schema(
         name: String,
         price: Number,
         quantity: Number,
+        // Legacy generic bag — kept for backward compatibility
         selectedOptions: { type: mongoose.Schema.Types.Mixed, default: {} },
+        // Explicit typed selections (new fields for bracelet builder)
+        selections: { type: orderSelectionsSchema, default: () => ({}) },
       },
     ],
 

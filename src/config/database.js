@@ -1,4 +1,14 @@
 import mongoose from "mongoose";
+import dns from "dns";
+
+// Node.js may be misconfigured to use 127.0.0.1 (a local proxy that isn't running).
+// Override with reliable public DNS so mongodb+srv:// SRV lookups always work.
+// This only affects this process — it does not change system DNS settings.
+const currentServers = dns.getServers();
+if (currentServers.length === 0 || currentServers.every((s) => s.startsWith("127."))) {
+  dns.setServers(["8.8.8.8", "1.1.1.1"]);
+  console.log("⚠️  DNS override: local DNS unavailable, using 8.8.8.8 / 1.1.1.1");
+}
 
 const connectDB = async () => {
   try {

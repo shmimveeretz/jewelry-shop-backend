@@ -126,14 +126,64 @@ export const toggleSubscription = async (req, res) => {
 // @desc    Send bulk email to all newsletter subscribers
 // @route   POST /api/newsletter/send
 // @access  Private/Admin
+export const toggleSubscriber = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { subscribed } = req.body;
+
+    const subscriber = await NewsletterMongo.findById(id);
+    if (!subscriber) {
+      return res
+        .status(404)
+        .json({ success: false, message: "מנוי לא נמצא" });
+    }
+
+    subscriber.active =
+      typeof subscribed === "boolean" ? subscribed : !subscriber.active;
+    await subscriber.save();
+
+    res.json({
+      success: true,
+      message: subscriber.active ? "המנוי הופעל" : "המנוי הושהה",
+      data: subscriber,
+    });
+  } catch (error) {
+    console.error("❌ Toggle Subscriber Error:", error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const deleteSubscriber = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await NewsletterMongo.findByIdAndDelete(id);
+
+    if (!deleted) {
+      return res
+        .status(404)
+        .json({ success: false, message: "מנוי לא נמצא" });
+    }
+
+    res.json({ success: true, message: "המנוי נמחק בהצלחה" });
+  } catch (error) {
+    console.error("❌ Delete Subscriber Error:", error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const sendBulkEmail = async (req, res) => {
   try {
-    const { subject, htmlContent } = req.body;
+    const { subject, htmlContent, content } = req.body;
+    const rawContent = htmlContent || content;
+    const bodyContent =
+      rawContent && rawContent.includes("<")
+        ? rawContent
+        : `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.6">${String(rawContent || "").replace(/\n/g, "<br>")}</div>`;
 
-    if (!subject || !htmlContent) {
+    if (!subject || !rawContent) {
       return res.status(400).json({
         success: false,
-        message: "subject ו-htmlContent הם שדות חובה",
+        message: "subject ותוכן ההודעה הם שדות חובה",
       });
     }
 
@@ -141,7 +191,7 @@ export const sendBulkEmail = async (req, res) => {
     // 1. Email-only subscribers (NewsletterMongo)
     // 2. Registered users who opted in (UserMongo)
     const [newsletterDocs, subscribedUsers] = await Promise.all([
-      NewsletterMongo.find({}).select("email"),
+      NewsletterMongo.find({ active: { $ne: false } }).select("email"),
       UserMongo.find({ isSubscribedToNewsletter: true, blocked: false }).select(
         "email",
       ),
@@ -169,7 +219,7 @@ export const sendBulkEmail = async (req, res) => {
 
     // Send one by one — one failure must not crash the rest
     for (const email of recipients) {
-      const result = await sendEmail({ to: email, subject, html: htmlContent });
+      const result = await sendEmail({ to: email, subject, html: bodyContent });
       if (result.success) {
         results.sent++;
       } else {

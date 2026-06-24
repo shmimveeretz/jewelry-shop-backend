@@ -4,6 +4,9 @@ import Device from "../models/Device.js";
 import Order from "../models/Order.js";
 import OrderMongo from "../models/OrderMongo.js";
 import NewsletterMongo from "../models/NewsletterMongo.js";
+import UserMongo from "../models/UserMongo.js";
+import DeviceMongo from "../models/DeviceMongo.js";
+import ProductMongo from "../models/ProductMongo.js";
 import { createManualDocument } from "../utils/payPlusAPI.js";
 
 const router = express.Router();
@@ -262,61 +265,175 @@ router.delete("/devices/:id", protect, checkAdminOrROI, async (req, res) => {
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
 
+function calcTrend(current, previous) {
+  if (!previous) return current > 0 ? 100 : 0;
+  return Math.round(((current - previous) / previous) * 100);
+}
+
+function getPeriodRanges(period) {
+  const now = new Date();
+  const ms = {
+    day: 24 * 60 * 60 * 1000,
+    week: 7 * 24 * 60 * 60 * 1000,
+    month: 30 * 24 * 60 * 60 * 1000,
+    year: 365 * 24 * 60 * 60 * 1000,
+  };
+
+  const duration = ms[period] || ms.month;
+  const currentStart = new Date(now.getTime() - duration);
+  const previousStart = new Date(currentStart.getTime() - duration);
+
+  return { now, currentStart, previousStart, duration };
+}
+
+function buildTimeBuckets(period, currentStart, now) {
+  const buckets = [];
+  if (period === "day") {
+    for (let i = 23; i >= 0; i--) {
+      const end = new Date(now.getTime() - i * 60 * 60 * 1000);
+      const start = new Date(end.getTime() - 60 * 60 * 1000);
+      buckets.push({
+        label: end.toLocaleTimeString("he-IL", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        start,
+        end,
+      });
+    }
+    return buckets;
+  }
+
+  const days = period === "week" ? 7 : period === "year" ? 12 : 30;
+  const stepMs =
+    period === "year"
+      ? 30 * 24 * 60 * 60 * 1000
+      : 24 * 60 * 60 * 1000;
+
+  for (let i = days - 1; i >= 0; i--) {
+    const end = new Date(now.getTime() - i * stepMs);
+    const start = new Date(end.getTime() - stepMs);
+    buckets.push({
+      label:
+        period === "year"
+          ? end.toLocaleDateString("he-IL", { month: "short" })
+          : end.toLocaleDateString("he-IL", { day: "numeric", month: "short" }),
+      start,
+      end,
+    });
+  }
+  return buckets;
+}
+
 // @desc    Get dashboard statistics
-// @route   GET /api/admin/stats?period=week|month|year|all
+// @route   GET /api/admin/stats?period=day|week|month|year|all
 // @access  Private/Admin/ROI
 router.get("/stats", protect, checkAdminOrROI, async (req, res) => {
   try {
-    const { period = "month" } = req.query;
+    const { period = "week" } = req.query;
+    const { now, currentStart, previousStart } = getPeriodRanges(
+      period === "all" ? "month" : period,
+    );
 
-    const now = new Date();
-    let since;
-    switch (period) {
-      case "week":
-        since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case "month":
-        since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        break;
-      case "year":
-        since = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-        break;
-      default:
-        since = null; // all time
-    }
+    const currentFilter = { createdAt: { $gte: currentStart, $lte: now } };
+    const previousFilter = {
+      createdAt: { $gte: previousStart, $lt: currentStart },
+    };
 
-    const dateFilter = since ? { createdAt: { $gte: since } } : {};
-
-    const [allOrders, periodOrders, newsletterCount] = await Promise.all([
-      OrderMongo.find({}).select("totalPrice status createdAt"),
-      OrderMongo.find(dateFilter).select("totalPrice status createdAt"),
-      NewsletterMongo.countDocuments(),
+    const [
+      allOrders,
+      currentOrders,
+      previousOrders,
+      currentUsers,
+      previousUsers,
+      currentVisits,
+      previousVisits,
+      newsletterCount,
+      products,
+    ] = await Promise.all([
+      OrderMongo.find({}).select("totalPrice status createdAt category"),
+      OrderMongo.find(currentFilter).select("totalPrice status createdAt"),
+      OrderMongo.find(previousFilter).select("totalPrice status createdAt"),
+      UserMongo.countDocuments(currentFilter),
+      UserMongo.countDocuments(previousFilter),
+      DeviceMongo.countDocuments(currentFilter),
+      DeviceMongo.countDocuments(previousFilter),
+      NewsletterMongo.countDocuments({ active: { $ne: false } }),
+      ProductMongo.find({}).select("category"),
     ]);
 
-    const totalRevenue = allOrders.reduce(
-      (sum, o) => sum + (o.totalPrice || 0),
-      0,
-    );
-    const periodRevenue = periodOrders.reduce(
-      (sum, o) => sum + (o.totalPrice || 0),
-      0,
-    );
+    const sumRevenue = (orders) =>
+      Math.round(
+        orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0) * 100,
+      ) / 100;
+
+    const currentRevenue = sumRevenue(currentOrders);
+    const previousRevenue = sumRevenue(previousOrders);
 
     const statusCounts = {};
     for (const o of allOrders) {
-      statusCounts[o.status] = (statusCounts[o.status] || 0) + 1;
+      const key = o.status || "Pending";
+      statusCounts[key] = (statusCounts[key] || 0) + 1;
     }
+
+    const categoryCounts = {};
+    for (const p of products) {
+      if (!p.category) continue;
+      categoryCounts[p.category] = (categoryCounts[p.category] || 0) + 1;
+    }
+
+    const buckets = buildTimeBuckets(
+      period === "all" ? "month" : period,
+      currentStart,
+      now,
+    );
+    const revenueOverTime = buckets.map((bucket) => {
+      const bucketOrders = currentOrders.filter(
+        (o) => o.createdAt >= bucket.start && o.createdAt <= bucket.end,
+      );
+      return {
+        label: bucket.label,
+        revenue: sumRevenue(bucketOrders),
+        orders: bucketOrders.length,
+      };
+    });
 
     res.json({
       success: true,
       data: {
         period,
+        orders: {
+          count: currentOrders.length,
+          trend: calcTrend(currentOrders.length, previousOrders.length),
+        },
+        revenue: {
+          total: currentRevenue,
+          trend: calcTrend(currentRevenue, previousRevenue),
+        },
+        newUsers: {
+          count: currentUsers,
+          trend: calcTrend(currentUsers, previousUsers),
+        },
+        visits: {
+          count: currentVisits,
+          trend: calcTrend(currentVisits, previousVisits),
+        },
         totalOrders: allOrders.length,
-        periodOrders: periodOrders.length,
-        totalRevenue: Math.round(totalRevenue * 100) / 100,
-        periodRevenue: Math.round(periodRevenue * 100) / 100,
+        totalRevenue: sumRevenue(allOrders),
+        periodOrders: currentOrders.length,
+        periodRevenue: currentRevenue,
         ordersByStatus: statusCounts,
         newsletterSubscribers: newsletterCount,
+        charts: {
+          revenueOverTime,
+          ordersByStatus: Object.entries(statusCounts).map(([status, count]) => ({
+            status,
+            count,
+          })),
+          productsByCategory: Object.entries(categoryCounts).map(
+            ([category, count]) => ({ category, count }),
+          ),
+        },
       },
     });
   } catch (error) {
@@ -386,27 +503,31 @@ router.put("/orders/:id/status", protect, checkAdminOrROI, async (req, res) => {
     const { status } = req.body;
 
     const validStatuses = [
-      "pending",
-      "processing",
-      "shipped",
-      "delivered",
-      "cancelled",
+      "Pending",
+      "Paid",
+      "Processing",
+      "Shipped",
+      "Delivered",
+      "Cancelled",
     ];
-    if (!status || !validStatuses.includes(status)) {
+    const normalizedStatus =
+      status?.charAt(0).toUpperCase() + status?.slice(1).toLowerCase();
+
+    if (!status || !validStatuses.includes(normalizedStatus)) {
       return res.status(400).json({
         success: false,
         message: `סטטוס לא תקין. אפשרויות: ${validStatuses.join(", ")}`,
       });
     }
 
-    const updated = await Order.updateStatus(id, status);
+    const updated = await Order.updateStatus(id, normalizedStatus);
     if (!updated) {
       return res
         .status(404)
         .json({ success: false, message: "הזמנה לא נמצאה" });
     }
 
-    console.log(`✅ Order ${id} status → ${status}`);
+    console.log(`✅ Order ${id} status → ${normalizedStatus}`);
     res.json({
       success: true,
       message: "סטטוס ההזמנה עודכן בהצלחה",

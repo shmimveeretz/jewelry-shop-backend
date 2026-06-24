@@ -4,6 +4,7 @@ import OrderMongo from "../models/OrderMongo.js";
 import UserMongo from "../models/UserMongo.js";
 import PendingOrderMongo from "../models/PendingOrderMongo.js";
 import Product from "../models/Product.js";
+import ProductMongo from "../models/ProductMongo.js";
 import {
   sendCustomerOrderInvoice,
   sendBusinessOwnerOrderNotification,
@@ -14,6 +15,7 @@ import {
   createManualDocument,
   getTransactionByPageRequestUid,
 } from "../utils/payPlusAPI.js";
+import { getExtraLetterPerBraceletCost } from "../utils/extraHebrewLetters.js";
 
 // @desc    Verify PayPlus payment and save order to DB
 // @route   GET /api/payment/verify/:transactionUid
@@ -831,15 +833,72 @@ export const generatePaymentLinkHandler = async (req, res) => {
         .json({ success: false, message: "amount חייב להיות מספר חיובי" });
     }
 
+    // ── Server-side price revalidation ────────────────────────────────────────
+    // If each item carries a productId, we re-fetch the price from the DB so the
+    // frontend can never manipulate the charged amount.
+    let validatedItems = Array.isArray(items) ? items : [];
+    let serverTotal = 0;
+
+    const hasProductIds =
+      validatedItems.length > 0 && validatedItems[0]?.productId;
+
+    if (hasProductIds) {
+      validatedItems = await Promise.all(
+        validatedItems.map(async (item) => {
+          const product = await ProductMongo.findOne({ id: item.productId });
+          if (!product) {
+            throw new Error(`מוצר לא נמצא: ${item.productId}`);
+          }
+
+          const sel = item.selections || item.selectedOptions || {};
+          const metalType = sel.metalType ?? "";
+          const jewelryType = sel.jewelryType ?? "";
+          const extraLetters = Array.isArray(sel.extraLetters)
+            ? sel.extraLetters
+            : [];
+
+          const metalAddition =
+            product.priceAdditions?.metalType?.[metalType] ?? 0;
+
+          let extraLettersCost = 0;
+          if (jewelryType === "צמיד") {
+            const perLetter = getExtraLetterPerBraceletCost(
+              product.priceAdditions,
+              metalType,
+            );
+            extraLettersCost = extraLetters.length * perLetter;
+          }
+
+          const unitPrice =
+            (product.price ?? 0) + metalAddition + extraLettersCost;
+
+          return {
+            ...item,
+            name: item.name || product.name,
+            price: unitPrice,
+          };
+        }),
+      );
+
+      serverTotal = validatedItems.reduce(
+        (sum, item) => sum + item.price * (Number(item.quantity) || 1),
+        0,
+      );
+    }
+
+    // Use the server-computed total when available; otherwise trust the provided amount
+    const resolvedAmount =
+      serverTotal > 0 ? Math.round(serverTotal * 100) / 100 : Number(amount);
+
     const result = await generatePaymentLink({
-      amount: Number(amount),
+      amount: resolvedAmount,
       currency_code,
       description,
       customerName,
       customerEmail,
       customerPhone,
       moreInfo,
-      items: Array.isArray(items) ? items : [],
+      items: validatedItems,
       successUrl,
       failureUrl,
       notifyUrl: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/payment/webhook`,

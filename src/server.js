@@ -18,6 +18,8 @@ import adminRoutes from "./routes/adminRoutes.js";
 import emailRoutes from "./routes/emailRoutes.js";
 import couponRoutes from "./routes/couponRoutes.js";
 import newsletterRoutes from "./routes/newsletterRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
 import Device from "./models/Device.js";
 
 // Load env vars
@@ -35,12 +37,18 @@ app.set("trust proxy", 1);
 app.use(helmet());
 
 // --- תיקון 1: עדכון רשימת הדומיינים המורשים ---
+const normalizeOrigin = (url) => (url ? url.replace(/\/$/, "") : null);
+
 const allowedOrigins = [
-  process.env.FRONTEND_URL,
+  normalizeOrigin(process.env.FRONTEND_URL),
   "https://shmimveeretz.netlify.app",
   "https://www.shmimveeretz.netlify.app",
-  "https://shamaimveeretz.com", // Another typo variant
-  "https://www.shamaimveeretz.com", // Another typo variant
+  "https://shamaimveeretz.com",
+  "https://www.shamaimveeretz.com",
+  // Local development
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://localhost:4173",
 ].filter(Boolean);
 
 console.log("📝 CORS Allowed Origins:", allowedOrigins);
@@ -120,6 +128,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/email", emailRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/newsletter", newsletterRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/categories", categoryRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
@@ -162,6 +172,27 @@ const server = app.listen(PORT, () => {
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
     `);
+});
+
+server.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(`
+❌ Port ${PORT} is already in use.
+
+Another backend instance is probably still running.
+Stop it first, then restart:
+
+  Windows (PowerShell):
+    Get-NetTCPConnection -LocalPort ${PORT} | Select-Object OwningProcess
+    Stop-Process -Id <PID> -Force
+
+  Or close the other terminal running "npm run dev" / "dev:all".
+`);
+    process.exit(1);
+  }
+
+  console.error("❌ Server error:", err.message);
+  process.exit(1);
 });
 
 // Handle unhandled promise rejections

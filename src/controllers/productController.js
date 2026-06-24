@@ -1,6 +1,20 @@
 import Product from "../models/Product.js";
 import { uploadImage, deleteImage } from "../utils/cloudinaryUpload.js";
 
+const parseArrayField = (value) => {
+  if (!value) return undefined;
+  if (Array.isArray(value)) return value;
+  return String(value)
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+};
+
+const getImageUrl = (img) => {
+  if (!img) return null;
+  return typeof img === "string" ? img : img.url || null;
+};
+
 // @desc    Get all products with filters and pagination
 // @route   GET /api/products
 // @access  Public
@@ -16,10 +30,6 @@ export const getProducts = async (req, res) => {
     } = req.query;
     const skip = (page - 1) * limit;
 
-    console.log("📋 Get Products Request:");
-    console.log("Filters:", { category, minPrice, maxPrice, limit, page });
-
-    // Build filter
     let filter = {};
 
     if (category && category !== "הכל") {
@@ -34,17 +44,14 @@ export const getProducts = async (req, res) => {
 
     if (search) {
       filter.$or = [
-        { "name": { $regex: search, $options: "i" } },
+        { name: { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
       ];
     }
 
-    // Fetch products with pagination
     const products = await Product.findAll(filter);
     const paginatedProducts = products.slice(skip, skip + parseInt(limit));
     const total = products.length;
-
-    console.log(`✅ Found ${total} products, returning page ${page}`);
 
     res.json({
       success: true,
@@ -69,9 +76,6 @@ export const getProducts = async (req, res) => {
 export const getProduct = async (req, res) => {
   try {
     const { id } = req.params;
-
-    console.log("🔍 Get Product by ID:", id);
-
     const product = await Product.findById(id);
 
     if (!product) {
@@ -102,20 +106,22 @@ export const createProduct = async (req, res) => {
   try {
     const {
       name,
+      nameEn,
       description,
+      descriptionEn,
       price,
       category,
-      zodiacSign,
+      categoryEn,
+      letter,
+      meaningHe,
+      gematria,
+      types,
       metals,
       stock,
       discountPrice,
+      status,
     } = req.body;
 
-    console.log("📦 Create Product Request:");
-    console.log("name:", name);
-    console.log("Price:", price);
-
-    // Validate required fields
     if (!name || !price || !description || !category) {
       return res.status(400).json({
         success: false,
@@ -124,15 +130,11 @@ export const createProduct = async (req, res) => {
     }
 
     let imageUrl = null;
-
-    // Upload image to Cloudinary if provided
     if (req.file) {
       try {
         const upload = await uploadImage(req.file.buffer, "products");
         imageUrl = upload.url;
-        console.log("📸 Image uploaded:", imageUrl);
       } catch (uploadError) {
-        console.error("❌ Image upload failed:", uploadError);
         return res.status(400).json({
           success: false,
           message: "Failed to upload image: " + uploadError.message,
@@ -140,32 +142,29 @@ export const createProduct = async (req, res) => {
       }
     }
 
-    // Create product
     const productData = {
       name,
+      nameEn: nameEn || "",
       description,
+      descriptionEn: descriptionEn || "",
       price: parseFloat(price),
       category,
-      zodiacSign: zodiacSign || "כללי",
+      categoryEn: categoryEn || "",
+      letter: letter || "",
+      meaningHe: meaningHe || "",
+      gematria: gematria ? parseInt(gematria) : undefined,
+      types: parseArrayField(types),
+      metals: parseArrayField(metals),
       stock: stock ? parseInt(stock) : 0,
-      isAvailable: stock ? parseInt(stock) > 0 : false,
+      discountPrice: discountPrice ? parseFloat(discountPrice) : undefined,
+      status: status === "inactive" ? "inactive" : "active",
     };
 
     if (imageUrl) {
-      productData.images = [{ url: imageUrl, alt: name }];
-    }
-
-    if (metals) {
-      productData.metals = Array.isArray(metals) ? metals : [metals];
-    }
-
-    if (discountPrice) {
-      productData.discountPrice = parseFloat(discountPrice);
+      productData.images = [imageUrl];
     }
 
     const product = await Product.create(productData);
-
-    console.log("✅ Product created:", product._id);
 
     res.status(201).json({
       success: true,
@@ -187,22 +186,8 @@ export const createProduct = async (req, res) => {
 export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      name,
-      description,
-      price,
-      category,
-      zodiacSign,
-      metals,
-      stock,
-      discountPrice,
-    } = req.body;
-
-    console.log("📝 Update Product Request:");
-    console.log("Product ID:", id);
-
-    // Get existing product
     const existingProduct = await Product.findById(id);
+
     if (!existingProduct) {
       return res.status(404).json({
         success: false,
@@ -210,22 +195,18 @@ export const updateProduct = async (req, res) => {
       });
     }
 
-    // Handle image upload
     let images = existingProduct.images;
     if (req.file) {
       try {
-        // Delete old image from Cloudinary if exists
-        if (existingProduct.images && existingProduct.images.length > 0) {
-          const publicId = extractPublicId(existingProduct.images[0].url);
+        const oldUrl = getImageUrl(existingProduct.images?.[0]);
+        if (oldUrl) {
+          const publicId = extractPublicId(oldUrl);
           if (publicId) await deleteImage(publicId);
         }
 
-        // Upload new image
         const upload = await uploadImage(req.file.buffer, "products");
-        images = [{ url: upload.url, alt: name || existingProduct.name }];
-        console.log("📸 Image updated:", images[0].url);
+        images = [upload.url];
       } catch (uploadError) {
-        console.error("❌ Image upload failed:", uploadError);
         return res.status(400).json({
           success: false,
           message: "Failed to upload image",
@@ -233,24 +214,34 @@ export const updateProduct = async (req, res) => {
       }
     }
 
-    // Prepare update data
     const updateData = {};
-    if (name) updateData.name = name;
-    if (description) updateData.description = description;
-    if (price) updateData.price = parseFloat(price);
-    if (category) updateData.category = category;
-    if (zodiacSign) updateData.zodiacSign = zodiacSign;
-    if (stock !== undefined) {
-      updateData.stock = parseInt(stock);
-      updateData.isAvailable = parseInt(stock) > 0;
+    const fields = [
+      "name",
+      "nameEn",
+      "description",
+      "descriptionEn",
+      "category",
+      "categoryEn",
+      "letter",
+      "meaningHe",
+      "status",
+    ];
+
+    for (const field of fields) {
+      if (req.body[field] !== undefined) updateData[field] = req.body[field];
     }
-    if (discountPrice) updateData.discountPrice = parseFloat(discountPrice);
-    if (metals) updateData.metals = Array.isArray(metals) ? metals : [metals];
+
+    if (req.body.price !== undefined) updateData.price = parseFloat(req.body.price);
+    if (req.body.stock !== undefined) updateData.stock = parseInt(req.body.stock);
+    if (req.body.gematria !== undefined)
+      updateData.gematria = parseInt(req.body.gematria);
+    if (req.body.discountPrice !== undefined)
+      updateData.discountPrice = parseFloat(req.body.discountPrice);
+    if (req.body.types !== undefined) updateData.types = parseArrayField(req.body.types);
+    if (req.body.metals !== undefined) updateData.metals = parseArrayField(req.body.metals);
     if (images) updateData.images = images;
 
     const product = await Product.update(id, updateData);
-
-    console.log("✅ Product updated:", id);
 
     res.json({
       success: true,
@@ -272,9 +263,6 @@ export const updateProduct = async (req, res) => {
 export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-
-    console.log("🗑️ Delete Product:", id);
-
     const product = await Product.findById(id);
 
     if (!product) {
@@ -284,10 +272,10 @@ export const deleteProduct = async (req, res) => {
       });
     }
 
-    // Delete image from Cloudinary
-    if (product.images && product.images.length > 0) {
+    const imageUrl = getImageUrl(product.images?.[0]);
+    if (imageUrl) {
       try {
-        const publicId = extractPublicId(product.images[0].url);
+        const publicId = extractPublicId(imageUrl);
         if (publicId) await deleteImage(publicId);
       } catch (error) {
         console.warn("⚠️ Could not delete image from Cloudinary:", error);
@@ -295,15 +283,12 @@ export const deleteProduct = async (req, res) => {
     }
 
     const result = await Product.delete(id);
-
     if (!result) {
       return res.status(404).json({
         success: false,
         message: "מוצר לא נמצא",
       });
     }
-
-    console.log("✅ Product deleted successfully");
 
     res.json({
       success: true,
@@ -326,10 +311,6 @@ export const addReview = async (req, res) => {
     const { id } = req.params;
     const { name, rating, comment } = req.body;
 
-    console.log("⭐ Add Review Request:");
-    console.log("Product ID:", id);
-    console.log("Rating:", rating);
-
     if (!name || !rating || !comment) {
       return res.status(400).json({
         success: false,
@@ -345,7 +326,6 @@ export const addReview = async (req, res) => {
     }
 
     const product = await Product.findById(id);
-
     if (!product) {
       return res.status(404).json({
         success: false,
@@ -353,16 +333,10 @@ export const addReview = async (req, res) => {
       });
     }
 
-    const review = {
-      name,
+    await Product.addReview(id, {
       rating: parseInt(rating),
       comment,
-      date: new Date().toISOString(),
-    };
-
-    await product.addReview(review);
-
-    console.log("✅ Review added successfully");
+    });
 
     res.json({
       success: true,
@@ -378,7 +352,6 @@ export const addReview = async (req, res) => {
   }
 };
 
-// Helper function to extract public ID from Cloudinary URL
 const extractPublicId = (url) => {
   try {
     const parts = url.split("/");

@@ -81,6 +81,9 @@ export const sendOrderConfirmation = async (to, orderData) => {
 
   const html = `
         <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <img src="${process.env.BACKEND_URL || ''}/public/logo.png" alt="שמים וארץ" width="100" style="display: block; margin: 0 auto 12px; max-width: 100px; height: auto;" />
+            </div>
             <h2 style="color: #4a5568; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
                 🌟 אישור הזמנה - שמים וארץ
             </h2>
@@ -571,6 +574,7 @@ export const sendCustomerOrderInvoice = async (to, orderData) => {
         
         <!-- Header -->
         <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid transparent; border-image: linear-gradient(to left, #d4af37, #f4e5c3, #d4af37) 1;">
+          <img src="${process.env.BACKEND_URL || ''}/public/logo.png" alt="שמים וארץ" width="120" style="display: block; margin: 0 auto 16px; max-width: 120px; height: auto;" />
           <h1 style="color: #2c3e50; margin: 0; font-size: 36px; font-weight: 300; letter-spacing: 3px; text-transform: uppercase;">שמים וארץ</h1>
           <p style="color: #7f8c8d; margin: 15px 0 0 0; font-size: 14px; font-weight: 300; letter-spacing: 2px; text-transform: uppercase;">תכשיטי יהדות בעבודת יד</p>
         </div>
@@ -787,6 +791,7 @@ export const sendBusinessOwnerOrderNotification = async (orderData) => {
         
         <!-- Header -->
         <div style="text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid transparent; border-image: linear-gradient(to left, #d4af37, #f4e5c3, #d4af37) 1;">
+          <img src="${process.env.BACKEND_URL || ''}/public/logo.png" alt="שמים וארץ" width="100" style="display: block; margin: 0 auto 14px; max-width: 100px; height: auto;" />
           <h1 style="color: #2c3e50; margin: 0; font-size: 32px; font-weight: 300; letter-spacing: 3px; text-transform: uppercase;">שמים וארץ</h1>
           <p style="color: #7f8c8d; margin: 10px 0 0 0; font-size: 12px; font-weight: 300; letter-spacing: 2px;">מערכת ניהול הזמנות</p>
         </div>

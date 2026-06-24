@@ -21,6 +21,22 @@ const ProductSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    categoryEn: {
+      type: String,
+    },
+    descriptionEn: {
+      type: String,
+    },
+    discountPrice: {
+      type: Number,
+      min: 0,
+    },
+    status: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    },
+    metals: [String],
     price: {
       type: Number,
       required: true,
