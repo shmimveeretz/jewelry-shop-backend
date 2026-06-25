@@ -341,6 +341,12 @@ router.get("/stats", protect, checkAdminOrROI, async (req, res) => {
     const previousFilter = {
       createdAt: { $gte: previousStart, $lt: currentStart },
     };
+    const deviceCurrentFilter = {
+      lastLogin: { $gte: currentStart, $lte: now },
+    };
+    const devicePreviousFilter = {
+      lastLogin: { $gte: previousStart, $lt: currentStart },
+    };
 
     const [
       allOrders,
@@ -350,6 +356,7 @@ router.get("/stats", protect, checkAdminOrROI, async (req, res) => {
       previousUsers,
       currentVisits,
       previousVisits,
+      totalVisitors,
       newsletterCount,
       products,
     ] = await Promise.all([
@@ -358,8 +365,9 @@ router.get("/stats", protect, checkAdminOrROI, async (req, res) => {
       OrderMongo.find(previousFilter).select("totalPrice status createdAt"),
       UserMongo.countDocuments(currentFilter),
       UserMongo.countDocuments(previousFilter),
-      DeviceMongo.countDocuments(currentFilter),
-      DeviceMongo.countDocuments(previousFilter),
+      DeviceMongo.countDocuments(deviceCurrentFilter),
+      DeviceMongo.countDocuments(devicePreviousFilter),
+      DeviceMongo.countDocuments({}),
       NewsletterMongo.countDocuments({ active: { $ne: false } }),
       ProductMongo.find({}).select("category"),
     ]);
@@ -419,6 +427,7 @@ router.get("/stats", protect, checkAdminOrROI, async (req, res) => {
         visits: {
           count: currentVisits,
           trend: calcTrend(currentVisits, previousVisits),
+          total: totalVisitors,
         },
         totalOrders: allOrders.length,
         totalRevenue: sumRevenue(allOrders),

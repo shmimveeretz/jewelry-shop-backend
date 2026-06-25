@@ -567,6 +567,9 @@ export const getCouponStats = async (req, res) => {
       {
         $project: {
           _id: 0,
+          code: "$_id",
+          uses: "$usageCount",
+          revenue: "$totalRevenue",
           couponCode: "$_id",
           usageCount: 1,
           totalRevenue: 1,
