@@ -5,6 +5,7 @@ import {
   sendNewsletterWelcomeEmail,
   sendEmail,
 } from "../utils/emailService.js";
+import { buildEmailLayout } from "../utils/emailTemplates.js";
 
 // @desc    Get all newsletter subscribers
 // @route   GET /api/newsletter/subscribers
@@ -178,7 +179,9 @@ export const sendBulkEmail = async (req, res) => {
     const bodyContent =
       rawContent && rawContent.includes("<")
         ? rawContent
-        : `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.6">${String(rawContent || "").replace(/\n/g, "<br>")}</div>`;
+        : buildEmailLayout({
+            body: `<div style="font-family:'Manrope',Arial,sans-serif;font-size:15px;color:#4d4635;line-height:1.8;">${String(rawContent || "").replace(/\n/g, "<br>")}</div>`,
+          });
 
     if (!subject || !rawContent) {
       return res.status(400).json({

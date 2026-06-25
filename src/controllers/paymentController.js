@@ -861,7 +861,13 @@ export const generatePaymentLinkHandler = async (req, res) => {
             product.priceAdditions?.metalType?.[metalType] ?? 0;
 
           let extraLettersCost = 0;
-          if (jewelryType === "צמיד") {
+          if (product.id === "letter-chain") {
+            const perLetter = getExtraLetterPerBraceletCost(
+              product.priceAdditions,
+              metalType,
+            );
+            extraLettersCost = extraLetters.length * perLetter;
+          } else if (jewelryType === "צמיד") {
             const perLetter = getExtraLetterPerBraceletCost(
               product.priceAdditions,
               metalType,

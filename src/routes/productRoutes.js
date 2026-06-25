@@ -6,11 +6,14 @@ import {
   updateProduct,
   deleteProduct,
   addReview,
+  setHomeFeaturedProducts,
 } from "../controllers/productController.js";
 import { protect, admin } from "../middleware/auth.js";
 import { uploadSingle } from "../middleware/upload.js";
 
 const router = express.Router();
+
+router.put("/home-featured", protect, admin, setHomeFeaturedProducts);
 
 router
   .route("/")

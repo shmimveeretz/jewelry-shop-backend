@@ -39,6 +39,7 @@ class ProductModel {
       discountPrice: product.discountPrice,
       status: product.status || "active",
       featured: product.featured,
+      featuredOrder: product.featuredOrder ?? 0,
       rating: product.rating,
       reviews: product.reviews,
       createdAt: product.createdAt,

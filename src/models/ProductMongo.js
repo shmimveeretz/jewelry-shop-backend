@@ -74,6 +74,10 @@ const ProductSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    featuredOrder: {
+      type: Number,
+      default: 0,
+    },
     rating: {
       average: {
         type: Number,

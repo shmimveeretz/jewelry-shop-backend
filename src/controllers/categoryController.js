@@ -18,10 +18,10 @@ const DEFAULT_CATEGORIES = [
     nameHe: "כוכבי הלכת",
     nameEn: "Stars Pendants",
     descriptionHe:
-      "וַיַּעַשׂ אֱלֹהִים אֶת שְׁנֵי הַמְּאֹרֹת הַגְּדֹלִים",
+      "וַיַּעַשׂ אֱלֹהִים אֵת שְׁנֵי הַמְּאֹרֹת הַגְּדֹלִים אֶת־הַמָּאוֹר הַגָּדֹל לְמֶמְשֶׁלֶת הַיּוֹם וְאֵת הַמָּאוֹר הַקָּטֹן לְמֶמְשֶׁלֶת הַלַּיְלָה וְאֵת הַכּוֹכָבִים",
     descriptionEn:
       "And God made the two great lights—the greater light to govern the day and the lesser light to govern the night—and the stars",
-    sourceHe: "בראשית א׳:ט״ז",
+    sourceHe: "בְּרֵאשִׁית א׳:ט״ז",
     sourceEn: "Genesis 1:16",
     image:
       "https://res.cloudinary.com/dhayarvh3/image/upload/v1771410177/Planets.jpg",
@@ -31,10 +31,11 @@ const DEFAULT_CATEGORIES = [
     slug: "תליוני מזלות",
     nameHe: "תליוני מזלות",
     nameEn: "Zodiac Pendants",
-    descriptionHe: "בִּדְבַ֣ר יְ֭הֹוָה שָׁמַ֣יִם נַעֲשׂ֑וּ",
+    descriptionHe:
+      "בִּדְבַר יְהֹוָה שָׁמַיִם נֶעֱשׂוּ וּבְרוּחַ פִּיו כָּל־צְבָאָם",
     descriptionEn:
       "By the word of the LORD the heavens were made, and by the breath of His mouth all their host",
-    sourceHe: "תהלים ל״ג:ו׳",
+    sourceHe: "תְּהִלִּים ל״ג:ו׳",
     sourceEn: "Psalms 33:6",
     image:
       "https://res.cloudinary.com/dhayarvh3/image/upload/v1771410086/Zodiac_Pendants.jpg",
@@ -44,10 +45,11 @@ const DEFAULT_CATEGORIES = [
     slug: "אבני חושן",
     nameHe: "אבני חושן",
     nameEn: "Hoshen Stones",
-    descriptionHe: "וְהָאֲבָנִים תִּהְיֶינָה עַל שְׁמוֹת בְּנֵי יִשְׂרָאֵל",
+    descriptionHe:
+      "וְהָאֲבָנִים תִּהְיֶיןָ עַל־שְׁמֹת בְּנֵי־יִשְׂרָאֵל שְׁתֵּים עֶשְׂרֵה עַל־שְׁמוֹתָם פִּתּוּחֵי חוֹתָם אִישׁ עַל־שְׁמוֹ תִּהְיֶיןָ לִשְׁנֵי עָשָׂר שָׁבֶט",
     descriptionEn:
-      "And the stones shall be upon the names of the sons of Israel, twelve according to their names",
-    sourceHe: "שמות כ״ח:כ״א",
+      "And the stones shall be on the names of the sons of Israel, twelve according to their names, like the engravings of a signet, every one according to his name shall they be for the twelve tribes",
+    sourceHe: "שְׁמוֹת כ״ח:כ״א",
     sourceEn: "Exodus 28:21",
     image:
       "https://res.cloudinary.com/dhayarvh3/image/upload/v1771410296/Hoshen_Stones.jpg",
@@ -57,8 +59,10 @@ const DEFAULT_CATEGORIES = [
     slug: "שלישיות מיוחדות",
     nameHe: "מזל, אבן חושן וכוכב",
     nameEn: "Trinity Pendants",
-    descriptionHe: "שילוב מיוחד של מזל, אבן חושן וכוכב",
-    descriptionEn: "A special combination of zodiac, hoshen stone and star",
+    descriptionHe:
+      "שֶׁמַּזָּל, כּוֹכָב וְאֶבֶן חוֹשֶׁן נִפְגָּשִׁים = הַנְּשָׁמָה נִזְכֶּרֶת",
+    descriptionEn:
+      "When zodiac, star and hoshen stone meet — the soul is remembered",
     image:
       "https://res.cloudinary.com/dhayarvh3/image/upload/v1771406947/Trinity.jpg",
     sortOrder: 5,
@@ -67,8 +71,10 @@ const DEFAULT_CATEGORIES = [
     slug: "שילת",
     nameHe: "שילת",
     nameEn: "Shilat",
-    descriptionHe: "קולקציית שילת המיוחדת",
-    descriptionEn: "The special Shilat collection",
+    descriptionHe: "שְׂאוּ מָרוֹם עֵינֵיכֶם וּרְאוּ מִי־בָרָא אֵלֶּה",
+    descriptionEn: "Lift up your eyes on high and see: who created these?",
+    sourceHe: "יְשַׁעְיָהוּ מ׳:כ״ו",
+    sourceEn: "Isaiah 40:26",
     image:
       "https://res.cloudinary.com/dhayarvh3/image/upload/v1771152721/AboutBG.jpg",
     sortOrder: 6,

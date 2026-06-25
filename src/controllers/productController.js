@@ -1,4 +1,5 @@
 import Product from "../models/Product.js";
+import ProductMongo from "../models/ProductMongo.js";
 import { uploadImage, deleteImage } from "../utils/cloudinaryUpload.js";
 
 const parseArrayField = (value) => {
@@ -27,6 +28,7 @@ export const getProducts = async (req, res) => {
       limit = 100,
       page = 1,
       search,
+      featured,
     } = req.query;
     const skip = (page - 1) * limit;
 
@@ -49,7 +51,22 @@ export const getProducts = async (req, res) => {
       ];
     }
 
-    const products = await Product.findAll(filter);
+    if (featured === "true") {
+      filter.featured = true;
+    }
+
+    let products = await Product.findAll(filter);
+
+    if (featured === "true") {
+      products = products
+        .filter((p) => p.status !== "inactive")
+        .sort(
+          (a, b) =>
+            (a.featuredOrder ?? 0) - (b.featuredOrder ?? 0) ||
+            a.name.localeCompare(b.name, "he"),
+        );
+    }
+
     const paginatedProducts = products.slice(skip, skip + parseInt(limit));
     const total = products.length;
 
@@ -237,6 +254,10 @@ export const updateProduct = async (req, res) => {
       updateData.gematria = parseInt(req.body.gematria);
     if (req.body.discountPrice !== undefined)
       updateData.discountPrice = parseFloat(req.body.discountPrice);
+    if (req.body.featured !== undefined)
+      updateData.featured = req.body.featured === true || req.body.featured === "true";
+    if (req.body.featuredOrder !== undefined)
+      updateData.featuredOrder = parseInt(req.body.featuredOrder, 10) || 0;
     if (req.body.types !== undefined) updateData.types = parseArrayField(req.body.types);
     if (req.body.metals !== undefined) updateData.metals = parseArrayField(req.body.metals);
     if (images) updateData.images = images;
@@ -250,6 +271,60 @@ export const updateProduct = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Error updating product:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Set which products appear on the home page as best sellers
+// @route   PUT /api/products/home-featured
+// @access  Private/Admin
+// Body: { productIds: ["aleph", "letter-chain", ...] } — order = display order
+export const setHomeFeaturedProducts = async (req, res) => {
+  try {
+    const { productIds } = req.body;
+
+    if (!Array.isArray(productIds)) {
+      return res.status(400).json({
+        success: false,
+        message: "productIds חייב להיות מערך",
+      });
+    }
+
+    if (productIds.length > 8) {
+      return res.status(400).json({
+        success: false,
+        message: "ניתן לבחור עד 8 מוצרים לדף הבית",
+      });
+    }
+
+    const uniqueIds = [...new Set(productIds.filter((id) => typeof id === "string" && id.trim()))];
+
+    await ProductMongo.updateMany({}, { $set: { featured: false, featuredOrder: 0 } });
+
+    for (let i = 0; i < uniqueIds.length; i++) {
+      await ProductMongo.updateOne(
+        { id: uniqueIds[i] },
+        { $set: { featured: true, featuredOrder: i + 1 } },
+      );
+    }
+
+    const featured = await Product.findAll({ featured: true });
+    featured.sort(
+      (a, b) =>
+        (a.featuredOrder ?? 0) - (b.featuredOrder ?? 0) ||
+        a.name.localeCompare(b.name, "he"),
+    );
+
+    res.json({
+      success: true,
+      message: "מוצרי דף הבית עודכנו בהצלחה",
+      data: featured,
+    });
+  } catch (error) {
+    console.error("❌ Error setting home featured products:", error);
     res.status(500).json({
       success: false,
       message: error.message,

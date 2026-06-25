@@ -695,7 +695,14 @@ export const addToCart = async (req, res) => {
     let extraLettersCost = 0;
     let sanitizedExtraLetters = [];
 
-    if (jewelryType === "צמיד") {
+    if (product.id === "letter-chain") {
+      sanitizedExtraLetters = normalizedExtraLetters;
+      const perLetterCost = getExtraLetterPerBraceletCost(
+        product.priceAdditions,
+        metalType,
+      );
+      extraLettersCost = sanitizedExtraLetters.length * perLetterCost;
+    } else if (jewelryType === "צמיד") {
       sanitizedExtraLetters = normalizedExtraLetters;
       const perLetterCost = getExtraLetterPerBraceletCost(
         product.priceAdditions,
