@@ -65,6 +65,20 @@ const ProductSchema = new mongoose.Schema(
     gematria: {
       type: Number,
     },
+    zodiacSign: {
+      type: String,
+    },
+    zodiacSignEn: {
+      type: String,
+    },
+    zodiac: {
+      type: String,
+    },
+    zodiacEn: {
+      type: String,
+    },
+    zodiacSigns: [String],
+    zodiacSignsEn: [String],
     types: [String], // e.g., ["תליון", "טבעת"]
     stock: {
       type: Number,
