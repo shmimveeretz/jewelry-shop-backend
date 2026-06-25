@@ -5,7 +5,9 @@
 export const getFrontendUrl = (path = "") => {
   const base = (
     process.env.FRONTEND_URL || "https://shamaimveeretz.com"
-  ).replace(/\/$/, "");
+  )
+    .replace(/\/$/, "")
+    .replace("shmamaimveeretz.com", "shamaimveeretz.com");
   if (!path) return base;
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 };

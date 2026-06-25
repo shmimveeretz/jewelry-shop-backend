@@ -2,21 +2,12 @@ import User from "../models/User.js";
 import Device from "../models/Device.js";
 import { generateToken } from "../middleware/auth.js";
 import speakeasy from "speakeasy";
+import { getClientIP } from "../utils/clientIp.js";
 import {
   sendWelcomeEmail,
   sendNewUserNotificationToAdmin,
   sendPasswordResetEmail,
 } from "../utils/emailService.js";
-
-// Helper function to extract client IP
-const getClientIP = (req) => {
-  return (
-    req.ip ||
-    req.connection.remoteAddress ||
-    req.headers["x-forwarded-for"]?.split(",")[0].trim() ||
-    "UNKNOWN"
-  );
-};
 
 // Helper function to extract device info from User-Agent
 const getDeviceInfo = (userAgent) => {

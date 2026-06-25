@@ -1,6 +1,7 @@
 import express from "express";
 import { protect } from "../middleware/auth.js";
 import Device from "../models/Device.js";
+import { getClientIP, normalizeIP } from "../utils/clientIp.js";
 import Order from "../models/Order.js";
 import OrderMongo from "../models/OrderMongo.js";
 import NewsletterMongo from "../models/NewsletterMongo.js";
@@ -27,13 +28,13 @@ const checkAdminOrROI = (req, res, next) => {
 // @access  Public
 router.post("/devices/track", async (req, res) => {
   try {
-    const { ipAddress, location, deviceName, browser, os, screen, language } =
-      req.body;
+    const { location, deviceName, browser, os, screen, language } = req.body;
+    const ipAddress = getClientIP(req);
 
-    if (!ipAddress) {
+    if (!ipAddress || ipAddress === "UNKNOWN") {
       return res.status(400).json({
         success: false,
-        message: "ipAddress נדרש",
+        message: "לא ניתן לזהות כתובת IP",
       });
     }
 
@@ -192,33 +193,34 @@ router.put(
         });
       }
 
-      // Find all devices with this IP and block them
-      const devices = await Device.findAll({ ipAddress });
-      if (!devices || devices.length === 0) {
-        return res.status(404).json({
+      const normalizedIP = normalizeIP(decodeURIComponent(ipAddress));
+      if (!normalizedIP) {
+        return res.status(400).json({
           success: false,
-          message: "לא נמצאו התקנים עבור כתובת IP זו",
+          message: "כתובת IP לא תקינה",
         });
       }
 
-      const blockedDevices = [];
-      for (const device of devices) {
-        const result = await Device.blockIP(device._id, blocked);
-        if (result) blockedDevices.push(result);
+      const blockedDevice = await Device.blockByIPAddress(normalizedIP, blocked);
+      if (!blockedDevice) {
+        return res.status(404).json({
+          success: false,
+          message: "לא ניתן לעדכן חסימה עבור כתובת IP זו",
+        });
       }
 
       console.log(
         blocked
-          ? `🔒 Blocked ${blockedDevices.length} devices`
-          : `🔓 Unblocked ${blockedDevices.length} devices`,
+          ? `🔒 Blocked IP ${normalizedIP}`
+          : `🔓 Unblocked IP ${normalizedIP}`,
       );
 
       res.json({
         success: true,
         message: blocked
-          ? `${blockedDevices.length} התקנים נחסמו בהצלחה`
-          : `${blockedDevices.length} התקנים הופעלו בהצלחה`,
-        data: blockedDevices,
+          ? `כתובת IP ${normalizedIP} נחסמה בהצלחה`
+          : `חסימת כתובת IP ${normalizedIP} בוטלה בהצלחה`,
+        data: blockedDevice,
       });
     } catch (error) {
       console.error("❌ Error blocking IP:", error);

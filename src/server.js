@@ -21,6 +21,7 @@ import newsletterRoutes from "./routes/newsletterRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import Device from "./models/Device.js";
+import { getClientIP } from "./utils/clientIp.js";
 
 // Load env vars
 dotenv.config();
@@ -74,11 +75,19 @@ app.use(
   }),
 );
 
-// Rate limiting
+// Rate limiting — successful GETs don't count; 429 always returns JSON
 const limiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: "יותר מדי בקשות מכתובת IP זו, נסה שוב מאוחר יותר",
+  windowMs: 15 * 60 * 1000,
+  max: 250,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json({
+      success: false,
+      message: "יותר מדי בקשות מכתובת IP זו, נסה שוב מאוחר יותר",
+    });
+  },
 });
 
 app.use("/api", limiter);
@@ -89,11 +98,7 @@ app.use("/api", async (req, res, next) => {
   if (req.path === "/admin/devices/track") return next();
 
   try {
-    const clientIP =
-      req.headers["x-forwarded-for"]?.split(",")[0].trim() ||
-      req.ip ||
-      req.connection.remoteAddress;
-
+    const clientIP = getClientIP(req);
     const isBlocked = await Device.isIPBlocked(clientIP);
     if (isBlocked) {
       console.log(`🚫 Blocked IP attempted access: ${clientIP} → ${req.path}`);

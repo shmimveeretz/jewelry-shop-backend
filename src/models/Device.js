@@ -1,4 +1,5 @@
 import DeviceMongo from "./DeviceMongo.js";
+import { normalizeIP } from "../utils/clientIp.js";
 
 class DeviceModel {
   constructor() {
@@ -9,13 +10,14 @@ class DeviceModel {
     try {
       const { userId, ipAddress, deviceName, userAgent, location } = deviceData;
 
-      if (!userId || !ipAddress) {
+      const normalizedIP = normalizeIP(ipAddress);
+      if (!userId || !normalizedIP) {
         throw new Error("userId ו-ipAddress נדרשים");
       }
 
       const newDevice = await this.Model.create({
         userId,
-        ipAddress,
+        ipAddress: normalizedIP,
         deviceName,
         userAgent,
         location,
@@ -32,7 +34,11 @@ class DeviceModel {
 
   async findByUserAndIP(userId, ipAddress) {
     try {
-      const device = await this.Model.findOne({ userId, ipAddress }).populate(
+      const normalizedIP = normalizeIP(ipAddress);
+      const device = await this.Model.findOne({
+        userId,
+        ipAddress: normalizedIP,
+      }).populate(
         "userId",
         "firstName lastName email",
       );
@@ -45,8 +51,9 @@ class DeviceModel {
 
   async updateLastLogin(userId, ipAddress) {
     try {
+      const normalizedIP = normalizeIP(ipAddress);
       const device = await this.Model.findOneAndUpdate(
-        { userId, ipAddress },
+        { userId, ipAddress: normalizedIP },
         {
           lastLogin: new Date(),
           $inc: { loginCount: 1 },
@@ -88,14 +95,53 @@ class DeviceModel {
 
   async blockIP(id, blocked) {
     try {
-      const device = await this.Model.findByIdAndUpdate(
-        id,
-        { blocked, updatedAt: new Date() },
-        { new: true },
-      ).populate("userId", "firstName lastName email");
+      const target = await this.Model.findById(id);
+      if (!target) return null;
 
-      if (!device) return null;
+      const ipAddress = normalizeIP(target.ipAddress);
+      await this.Model.updateMany(
+        { ipAddress },
+        { blocked, updatedAt: new Date() },
+      );
+
+      const device = await this.Model.findById(id).populate(
+        "userId",
+        "firstName lastName email",
+      );
+
       return this.formatDevice(device);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async blockByIPAddress(ipAddress, blocked) {
+    try {
+      const normalizedIP = normalizeIP(ipAddress);
+      if (!normalizedIP) return null;
+
+      const updateResult = await this.Model.updateMany(
+        { ipAddress: normalizedIP },
+        { blocked, updatedAt: new Date() },
+      );
+
+      if (updateResult.matchedCount === 0 && blocked) {
+        const created = await this.Model.create({
+          ipAddress: normalizedIP,
+          blocked: true,
+          loginCount: 0,
+          firstLogin: new Date(),
+          lastLogin: new Date(),
+        });
+        return this.formatDevice(created);
+      }
+
+      const device = await this.Model.findOne({ ipAddress: normalizedIP }).sort({
+        blocked: -1,
+        lastLogin: -1,
+      });
+
+      return device ? this.formatDevice(device) : null;
     } catch (error) {
       throw error;
     }
@@ -112,8 +158,14 @@ class DeviceModel {
 
   async isIPBlocked(ipAddress) {
     try {
-      const device = await this.Model.findOne({ ipAddress, blocked: true });
-      return device ? true : false;
+      const normalized = normalizeIP(ipAddress);
+      if (!normalized) return false;
+
+      const device = await this.Model.findOne({
+        ipAddress: normalized,
+        blocked: true,
+      });
+      return Boolean(device);
     } catch (error) {
       throw error;
     }
@@ -121,8 +173,9 @@ class DeviceModel {
 
   async findAnonymousByIP(ipAddress) {
     try {
+      const normalizedIP = normalizeIP(ipAddress);
       const device = await this.Model.findOne({
-        ipAddress,
+        ipAddress: normalizedIP,
         userId: { $exists: false },
       });
       return device || null;
@@ -151,15 +204,16 @@ class DeviceModel {
       const { ipAddress, location, deviceName, browser, os, screen, language } =
         deviceData;
 
-      if (!ipAddress) {
+      const normalizedIP = normalizeIP(ipAddress);
+      if (!normalizedIP) {
         throw new Error("ipAddress נדרש");
       }
 
-      const existing = await this.Model.findOne({ ipAddress });
+      const existing = await this.Model.findOne({ ipAddress: normalizedIP });
 
       if (existing) {
         const updated = await this.Model.findOneAndUpdate(
-          { ipAddress },
+          { ipAddress: normalizedIP },
           {
             $inc: { loginCount: 1 },
             lastLogin: new Date(),
@@ -176,7 +230,7 @@ class DeviceModel {
         return this.formatDevice(updated);
       } else {
         const created = await this.Model.create({
-          ipAddress,
+          ipAddress: normalizedIP,
           location,
           deviceName,
           browser,
