@@ -152,6 +152,8 @@ export const createPaymentIntent = async (req, res) => {
       sendEmailApproval: true,
       sendEmailFailure: false,
       refURL_callback: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/payment/webhook`,
+      refURL_success: `${process.env.FRONTEND_URL || "https://shamaimveeretz.com"}/payment-success`,
+      refURL_failure: `${process.env.FRONTEND_URL || "https://shamaimveeretz.com"}/payment-failure`,
       initial_invoice: true,
       hide_identification_id: false,
       more_info: orderId, // Send order ID in more_info
@@ -682,11 +684,39 @@ export const payPlusWebhook = async (req, res) => {
       null;
 
     const statusCode = transaction.status_code ?? null;
-    const isApproved = statusCode === "000";
+    const isApproved =
+      statusCode === "000" ||
+      statusCode === 0 ||
+      statusCode === "0" ||
+      transaction.status === "approved" ||
+      transaction.payment_status === "completed";
 
     console.log("📩 PayPlus Webhook received:");
     console.log("  page_request_uid:", pageRequestUid);
     console.log("  status_code:", statusCode, "| approved:", isApproved);
+
+    // #region agent log
+    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "797a8e",
+      },
+      body: JSON.stringify({
+        sessionId: "797a8e",
+        location: "paymentController.js:payPlusWebhook:entry",
+        message: "webhook received",
+        data: {
+          pageRequestUid,
+          statusCode,
+          isApproved,
+          bodyKeys: Object.keys(req.body || {}),
+        },
+        hypothesisId: "H4-webhook-status",
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
 
     if (!isApproved) {
       console.warn(`⚠️ Webhook: not approved — status_code: ${statusCode}`);
@@ -710,6 +740,28 @@ export const payPlusWebhook = async (req, res) => {
     // Retrieve the pending order we stored before redirecting to PayPlus
     const pendingDoc = await PendingOrderMongo.findOne({ pageRequestUid });
     const orderData = pendingDoc?.orderData ?? {};
+
+    // #region agent log
+    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "797a8e",
+      },
+      body: JSON.stringify({
+        sessionId: "797a8e",
+        location: "paymentController.js:payPlusWebhook:pending",
+        message: "pending order lookup",
+        data: {
+          pageRequestUid,
+          pendingFound: Boolean(pendingDoc),
+          itemCount: orderData.items?.length ?? 0,
+        },
+        hypothesisId: "H5-pending-missing",
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
 
     // Fall back to data in the webhook payload if pendingOrder is missing
     const customerName =
@@ -768,6 +820,28 @@ export const payPlusWebhook = async (req, res) => {
       `✅ Webhook: order saved — id: ${newOrder._id}, uid: ${pageRequestUid}`,
     );
 
+    // #region agent log
+    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "797a8e",
+      },
+      body: JSON.stringify({
+        sessionId: "797a8e",
+        location: "paymentController.js:payPlusWebhook:saved",
+        message: "webhook order saved",
+        data: {
+          orderId: newOrder._id?.toString(),
+          pageRequestUid,
+          itemCount: newOrder.items?.length ?? 0,
+        },
+        hypothesisId: "H3-db-save",
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
     // Clean up pending order (best-effort)
     pendingDoc?.deleteOne().catch(() => {});
 
@@ -805,6 +879,23 @@ export const payPlusWebhook = async (req, res) => {
     );
   } catch (error) {
     console.error("❌ Webhook processing error:", error.message);
+    // #region agent log
+    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "797a8e",
+      },
+      body: JSON.stringify({
+        sessionId: "797a8e",
+        location: "paymentController.js:payPlusWebhook:error",
+        message: "webhook processing failed",
+        data: { error: error.message },
+        hypothesisId: "H3-db-save",
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     // Response already sent — just log
   }
 };
