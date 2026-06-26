@@ -180,6 +180,7 @@ class OrderModel {
         discountPercent: orderData.discountPercent || 0,
         paymentStatus: "completed",
         transactionUid,
+        orderId: transactionUid,
         status: "Pending",
       });
       return this.formatOrder(doc);

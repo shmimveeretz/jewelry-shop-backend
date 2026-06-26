@@ -13,26 +13,6 @@ import {
   getExtraLetterPerBraceletCost,
 } from "../utils/extraHebrewLetters.js";
 
-// #region agent log
-const debugOrderLog = (location, message, data, hypothesisId) => {
-  fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "797a8e",
-    },
-    body: JSON.stringify({
-      sessionId: "797a8e",
-      location,
-      message,
-      data,
-      hypothesisId,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-};
-// #endregion
-
 function resolvePaymentPageRequestUid(body = {}) {
   return (
     body.paymentPageRequestUid ||
@@ -334,6 +314,7 @@ export const orderSuccess = async (req, res) => {
       discountPercent: Number(discountPercent) || 0,
       paymentStatus: "completed",
       transactionUid: resolvedTransactionUid,
+      orderId: resolvedTransactionUid || `order_${Date.now()}`,
       status: "Pending",
     };
 
@@ -409,29 +390,7 @@ export const verifyTransaction = async (req, res) => {
     const paymentPageRequestUid = resolvePaymentPageRequestUid(req.body);
     const orderDataFromBody = resolveOrderDataFromBody(req.body);
 
-    // #region agent log
-    debugOrderLog(
-      "orderController.js:verifyTransaction:entry",
-      "verify-transaction called",
-      {
-        bodyKeys: Object.keys(req.body || {}),
-        paymentPageRequestUid,
-        hasNestedOrderData: Boolean(req.body?.orderData),
-        itemCount: orderDataFromBody?.items?.length ?? 0,
-      },
-      "H1-field-mismatch",
-    );
-    // #endregion
-
     if (!paymentPageRequestUid) {
-      // #region agent log
-      debugOrderLog(
-        "orderController.js:verifyTransaction:missing-uid",
-        "missing payment page request uid",
-        { bodyKeys: Object.keys(req.body || {}) },
-        "H1-field-mismatch",
-      );
-      // #endregion
       return res.status(400).json({
         success: false,
         message: "paymentPageRequestUid הוא שדה חובה",
@@ -464,20 +423,6 @@ export const verifyTransaction = async (req, res) => {
       txStatus === "1" ||
       txStatus === "approved" ||
       payPlusResponse?.data?.payment_status === "completed";
-
-    // #region agent log
-    debugOrderLog(
-      "orderController.js:verifyTransaction:payplus-result",
-      "PayPlus verification result",
-      {
-        paymentPageRequestUid,
-        txStatus,
-        isApproved,
-        hasTxData: Boolean(payPlusResponse?.data),
-      },
-      "H2-payplus-not-approved",
-    );
-    // #endregion
 
     if (!isApproved) {
       console.warn("⚠️ PayPlus transaction not approved:", payPlusResponse);
@@ -541,6 +486,7 @@ export const verifyTransaction = async (req, res) => {
       discountPercent: Number(orderData.discountPercent) || 0,
       paymentStatus: "completed",
       transactionUid: paymentPageRequestUid,
+      orderId: paymentPageRequestUid,
       status: "Pending",
       ...(req.user?.id && { userId: req.user.id }),
     });
@@ -587,20 +533,6 @@ export const verifyTransaction = async (req, res) => {
       `✅ Transaction verified & order saved — id: ${newOrder._id}, uid: ${paymentPageRequestUid}`,
     );
 
-    // #region agent log
-    debugOrderLog(
-      "orderController.js:verifyTransaction:saved",
-      "order saved to database",
-      {
-        orderId: newOrder._id?.toString(),
-        paymentPageRequestUid,
-        itemCount: newOrder.items?.length ?? 0,
-        totalPrice: newOrder.totalPrice,
-      },
-      "H3-db-save",
-    );
-    // #endregion
-
     // Notify business owner (non-blocking — never fails the response)
     sendBusinessOwnerOrderNotification({
       orderNumber: newOrder._id.toString(),
@@ -637,18 +569,11 @@ export const verifyTransaction = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "התשלום אומת וההזמנה נשמרה בהצלחה",
+      orderId: newOrder._id.toString(),
       data: newOrder,
     });
   } catch (error) {
     console.error("❌ verifyTransaction Error:", error.message);
-    // #region agent log
-    debugOrderLog(
-      "orderController.js:verifyTransaction:error",
-      "verify-transaction failed",
-      { error: error.message },
-      "H3-db-save",
-    );
-    // #endregion
     res.status(500).json({ success: false, message: error.message });
   }
 };
