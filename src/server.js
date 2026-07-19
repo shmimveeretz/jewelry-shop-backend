@@ -19,6 +19,7 @@ import emailRoutes from "./routes/emailRoutes.js";
 import couponRoutes from "./routes/couponRoutes.js";
 import newsletterRoutes from "./routes/newsletterRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
 import Device from "./models/Device.js";
 
 // Load env vars
@@ -122,6 +123,7 @@ app.use("/api/email", emailRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/newsletter", newsletterRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/categories", categoryRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
@@ -142,6 +144,8 @@ app.get("/", (req, res) => {
       auth: "/api/auth",
       products: "/api/products",
       payment: "/api/payment",
+      categories: "/api/categories",
+      orders: "/api/orders",
     },
   });
 });

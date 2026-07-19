@@ -608,15 +608,15 @@ export const sendCustomerOrderInvoice = async (to, orderData) => {
         <div style="background-color: #f7fafc; padding: 20px; border-radius: 5px; margin: 20px 0;">
           <h3 style="color: #2c3e50; margin-top: 0; padding-bottom: 12px; font-size: 18px; font-weight: 400; letter-spacing: 1px; border-bottom: 1px solid #d4af37;">כתובת למשלוח</h3>
           <p style="margin: 5px 0; color: #333;"><strong>${
-            shippingAddress.name
+            shippingAddress?.name || ""
           }</strong></p>
-          <p style="margin: 5px 0; color: #666;">${shippingAddress.phone}</p>
-          <p style="margin: 5px 0; color: #666;">${shippingAddress.street}</p>
-          <p style="margin: 5px 0; color: #666;">${shippingAddress.city}${
-            shippingAddress.zipCode ? `, ${shippingAddress.zipCode}` : ""
+          <p style="margin: 5px 0; color: #666;">${shippingAddress?.phone || ""}</p>
+          <p style="margin: 5px 0; color: #666;">${shippingAddress?.street || ""}</p>
+          <p style="margin: 5px 0; color: #666;">${shippingAddress?.city || ""}${
+            shippingAddress?.zipCode ? `, ${shippingAddress.zipCode}` : ""
           }</p>
           <p style="margin: 5px 0; color: #666;">${
-            shippingAddress.country || "ישראל"
+            shippingAddress?.country || "ישראל"
           }</p>
         </div>
         
@@ -671,9 +671,16 @@ export const sendCustomerOrderInvoice = async (to, orderData) => {
           <h3 style="color: #92400e; margin-top: 0;">📌 מה הלאה?</h3>
           <ul style="color: #92400e; line-height: 1.8; padding-right: 20px;">
             <li>נתחיל להכין את ההזמנה שלך מיד</li>
-            <li>תקבל עדכון כשההזמנה תישלח</li>
+            <li>מספר המעקב שלך: <strong>${orderNumber}</strong></li>
+            <li>ניתן לעקוב אחרי ההזמנה בקישור למטה</li>
             <li>משלוח סטנדרטי לוקח 3-5 ימי עסקים</li>
           </ul>
+          <p style="margin: 20px 0 0 0; text-align: center;">
+            <a href="${(process.env.FRONTEND_URL || "https://shamaimveeretz.com").replace(/\/+$/, "")}/track-order?orderId=${encodeURIComponent(String(orderNumber))}"
+               style="display: inline-block; background: #2c3e50; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: 600;">
+              מעקב אחר ההזמנה
+            </a>
+          </p>
         </div>
         
         <!-- Footer -->
@@ -699,7 +706,7 @@ export const sendCustomerOrderInvoice = async (to, orderData) => {
 
   return await sendEmail({
     to,
-    subject: `✅ חשבונית והזמנה #${orderNumber} - שמים וארץ`,
+    subject: `תודה על ההזמנה! מספר מעקב #${orderNumber} - שמים וארץ`,
     html,
   });
 };

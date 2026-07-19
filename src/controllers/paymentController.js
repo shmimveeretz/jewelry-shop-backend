@@ -111,6 +111,9 @@ export const createPaymentIntent = async (req, res) => {
     // Generate unique order ID (with or without user)
     const userId = req.user?.id || `guest_${Date.now()}`;
     const orderId = `order_${Date.now()}_${userId}`;
+    const frontendBase = (
+      process.env.FRONTEND_URL || "https://shamaimveeretz.com"
+    ).replace(/\/+$/, "");
 
     // Build items array for PayPlus invoice
     const sourceItems = orderItems || items;
@@ -152,8 +155,8 @@ export const createPaymentIntent = async (req, res) => {
       sendEmailApproval: true,
       sendEmailFailure: false,
       refURL_callback: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/payment/webhook`,
-      refURL_success: `${process.env.FRONTEND_URL || "https://shamaimveeretz.com"}/payment-success`,
-      refURL_failure: `${process.env.FRONTEND_URL || "https://shamaimveeretz.com"}/payment-failure`,
+      refURL_success: `${frontendBase}/payment-success`,
+      refURL_failure: `${frontendBase}/payment-failure`,
       initial_invoice: true,
       hide_identification_id: false,
       more_info: orderId, // Send order ID in more_info
@@ -183,6 +186,7 @@ export const createPaymentIntent = async (req, res) => {
       PendingOrderMongo.create({
         pageRequestUid,
         orderData: {
+          orderId,
           customerName: customer.customer_name,
           customerEmail: customer.email,
           customerPhone: customer.phone,
@@ -750,6 +754,11 @@ export const payPlusWebhook = async (req, res) => {
         selectedOptions: {},
       }));
 
+    const publicOrderId =
+      orderData.orderId ||
+      transaction.more_info ||
+      pageRequestUid;
+
     const newOrder = await OrderMongo.create({
       customerName,
       customerEmail,
@@ -768,20 +777,19 @@ export const payPlusWebhook = async (req, res) => {
       discountPercent: Number(orderData.discountPercent) || 0,
       paymentStatus: "completed",
       transactionUid: pageRequestUid,
-      orderId: pageRequestUid,
+      orderId: publicOrderId,
       status: "Pending",
     });
 
     console.log(
-      `✅ Webhook: order saved — id: ${newOrder._id}, uid: ${pageRequestUid}`,
+      `✅ Webhook: order saved — id: ${newOrder._id}, orderId: ${publicOrderId}, uid: ${pageRequestUid}`,
     );
 
     // Clean up pending order (best-effort)
     pendingDoc?.deleteOne().catch(() => {});
 
-    // Admin notification (non-blocking)
-    sendBusinessOwnerOrderNotification({
-      orderNumber: newOrder._id.toString(),
+    const emailPayload = {
+      orderNumber: publicOrderId,
       items: items.map((i) => ({
         productId: i.productId || "",
         name: i.name,
@@ -808,8 +816,15 @@ export const payPlusWebhook = async (req, res) => {
       createdAt: newOrder.createdAt,
       userId: null,
       customerEmail,
-    }).catch((err) =>
-      console.error("❌ Webhook admin notification failed:", err.message),
+    };
+
+    Promise.all([
+      customerEmail
+        ? sendCustomerOrderInvoice(customerEmail, emailPayload)
+        : Promise.resolve(),
+      sendBusinessOwnerOrderNotification(emailPayload),
+    ]).catch((err) =>
+      console.error("❌ Webhook order email failed:", err.message),
     );
   } catch (error) {
     console.error("❌ Webhook processing error:", error.message);
