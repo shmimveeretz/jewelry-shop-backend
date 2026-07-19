@@ -1,4 +1,5 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 import {
   getAllOrders,
   createOrder,
@@ -9,15 +10,24 @@ import {
   verifyTransaction,
   createFromPayment,
   getCouponStats,
-  addToCart,
+  trackOrderByOrderId,
 } from "../controllers/orderController.js";
 import { generatePaymentLinkHandler } from "../controllers/paymentController.js";
 import { protect, admin, optionalProtect } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// Validate a cart item and calculate server-side price — never trusts frontend price
-router.post("/cart/add", optionalProtect, addToCart);
+// Stricter limit on public order tracking to deter order-number guessing
+const trackOrderLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "יותר מדי ניסיונות מעקב. נסה שוב מאוחר יותר",
+  },
+});
 
 // Generate a PayPlus payment link — called by frontend before redirecting to payment page
 router.post("/create-payment", optionalProtect, generatePaymentLinkHandler);
@@ -30,6 +40,9 @@ router.post("/create-from-payment", optionalProtect, createFromPayment);
 
 // Order success callback — called by frontend after payment gateway confirms payment
 router.post("/success", optionalProtect, orderSuccess);
+
+// Public order tracking (must be before /:id)
+router.get("/track/:orderId", trackOrderLimiter, trackOrderByOrderId);
 
 // Order management endpoints
 router.get("/", protect, admin, getAllOrders); // Admin only - view all orders

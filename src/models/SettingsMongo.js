@@ -3,7 +3,6 @@ import mongoose from "mongoose";
 const settingsSchema = new mongoose.Schema(
   {
     motd: { type: String, default: "" },
-    motd2: { type: String, default: "" },
   },
   { timestamps: true },
 );

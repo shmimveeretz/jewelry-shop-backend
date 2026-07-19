@@ -62,6 +62,22 @@ const ProductSchema = new mongoose.Schema(
     meaningHe: {
       type: String,
     },
+    quoteHe: {
+      type: String,
+    },
+    quoteEn: {
+      type: String,
+    },
+    sourceHe: {
+      type: String,
+    },
+    sourceEn: {
+      type: String,
+    },
+    sortOrder: {
+      type: Number,
+      default: 0,
+    },
     gematria: {
       type: Number,
     },

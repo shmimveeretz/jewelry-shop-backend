@@ -57,7 +57,7 @@ const DEFAULT_CATEGORIES = [
   },
   {
     slug: "שלישיות מיוחדות",
-    nameHe: "מזל, אבן חושן וכוכב",
+    nameHe: "כוכב, מזל ואבן חושן",
     nameEn: "Trinity Pendants",
     descriptionHe:
       "שֶׁמַּזָּל, כּוֹכָב וְאֶבֶן חוֹשֶׁן נִפְגָּשִׁים = הַנְּשָׁמָה נִזְכֶּרֶת",
@@ -68,9 +68,9 @@ const DEFAULT_CATEGORIES = [
     sortOrder: 5,
   },
   {
-    slug: "שילת",
-    nameHe: "שילת",
-    nameEn: "Shilat",
+    slug: "סמלי בני ישראל",
+    nameHe: "סמלי בני ישראל",
+    nameEn: "Symbols of Israel",
     descriptionHe: "שְׂאוּ מָרוֹם עֵינֵיכֶם וּרְאוּ מִי־בָרָא אֵלֶּה",
     descriptionEn: "Lift up your eyes on high and see: who created these?",
     sourceHe: "יְשַׁעְיָהוּ מ׳:כ״ו",

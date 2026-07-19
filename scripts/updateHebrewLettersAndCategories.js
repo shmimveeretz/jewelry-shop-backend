@@ -96,7 +96,7 @@ const CATEGORY_UPDATES = [
     sourceEn: "Exodus 28:21",
   },
   {
-    slug: "שילת",
+    slug: "סמלי בני ישראל",
     descriptionHe: "שְׂאוּ מָרוֹם עֵינֵיכֶם וּרְאוּ מִי־בָרָא אֵלֶּה",
     descriptionEn: "Lift up your eyes on high and see: who created these?",
     sourceHe: "יְשַׁעְיָהוּ מ׳:כ״ו",
@@ -104,6 +104,7 @@ const CATEGORY_UPDATES = [
   },
   {
     slug: "שלישיות מיוחדות",
+    nameHe: "כוכב, מזל ואבן חושן",
     descriptionHe:
       "שֶׁמַּזָּל, כּוֹכָב וְאֶבֶן חוֹשֶׁן נִפְגָּשִׁים = הַנְּשָׁמָה נִזְכֶּרֶת",
     descriptionEn:

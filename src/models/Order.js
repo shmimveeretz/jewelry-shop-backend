@@ -76,6 +76,23 @@ class OrderModel {
     }
   }
 
+  /** Public tracking lookup — no populate, orderId is the customer-facing tracker */
+  async findByOrderIdForTracking(orderId) {
+    try {
+      const order = await this.Model.findOne({ orderId }).lean();
+      if (!order) return null;
+      return {
+        orderId: order.orderId,
+        status: order.status,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+        items: order.items,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async findAll(filter = {}) {
     try {
       const orders = await this.Model.find(filter)
