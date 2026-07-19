@@ -6,7 +6,11 @@ import {
   getTransactionByPageRequestUid,
   createManualDocument,
 } from "../utils/payPlusAPI.js";
-import { sendBusinessOwnerOrderNotification, sendCustomerOrderInvoice } from "../utils/emailService.js";
+import {
+  sendBusinessOwnerOrderNotification,
+  sendCustomerOrderInvoice,
+  sendOrderStatusUpdate,
+} from "../utils/emailService.js";
 import PendingOrderMongo from "../models/PendingOrderMongo.js";
 import {
   normalizeExtraHebrewLetters,
@@ -259,6 +263,33 @@ export const updateOrderStatus = async (req, res) => {
     }
 
     console.log("✅ Order status updated to:", status);
+
+    // Notify the customer about the new status (non-blocking)
+    const customerEmail = updatedOrder.customerEmail || updatedOrder.email;
+    if (customerEmail) {
+      sendOrderStatusUpdate(customerEmail, {
+        orderId: updatedOrder.orderId || updatedOrder.id,
+        status: normalizedStatus,
+        customerName:
+          updatedOrder.customerName ||
+          updatedOrder.shippingAddress?.fullName ||
+          "",
+      })
+        .then((r) =>
+          console.log(
+            r.success
+              ? `📧 Status update email sent to ${customerEmail}`
+              : `❌ Status update email failed: ${r.message}`,
+          ),
+        )
+        .catch((err) =>
+          console.error("❌ Status update email error:", err.message),
+        );
+    } else {
+      console.warn(
+        `⚠️ No customer email on order ${updatedOrder.orderId || id} — status email skipped`,
+      );
+    }
 
     res.json({
       success: true,

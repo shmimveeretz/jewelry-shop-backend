@@ -411,6 +411,14 @@ export const sendBusinessOwnerOrderNotification = async (orderData) => {
 export const sendOrderStatusUpdate = async (to, statusData) => {
   const { orderId, status, customerName } = statusData;
   const statusMessages = {
+    // DB enum statuses (English)
+    Pending: "ההזמנה התקבלה וממתינה לאישור",
+    Paid: "התשלום התקבל וההזמנה מעובדת",
+    Processing: "ההזמנה נמצאת בשלבי הכנה",
+    Shipped: "ההזמנה נשלחה ובדרכה אליך",
+    Delivered: "ההזמנה הגיעה ליעדה",
+    Cancelled: "ההזמנה בוטלה",
+    // Legacy Hebrew statuses
     התקבל: "ההזמנה התקבלה ומעובדת",
     בהכנה: "ההזמנה נמצאת בשלבי הכנה",
     נשלח: "ההזמנה נשלחה ובדרכה אליך",
