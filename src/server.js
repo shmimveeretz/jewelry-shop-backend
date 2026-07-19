@@ -160,7 +160,7 @@ const server = app.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
-║          🌟 שמיים וארץ - Shamayim VaAretz 🌟            ║
+║          🌟 שמים וארץ - Shamayim VaAretz 🌟            ║
 ║                                                           ║
 ║   Server running in ${process.env.NODE_ENV || "development"} mode                  ║
 ║   Port: ${PORT}                                           ║
