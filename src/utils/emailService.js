@@ -251,6 +251,163 @@ export const sendOrderConfirmation = async (to, orderData) => {
   });
 };
 
+/**
+ * Customer thank-you email with tracking number (sent after successful payment)
+ * orderData: { orderNumber, items, shippingAddress, itemsPrice, shippingPrice, totalPrice, paymentInfo, createdAt }
+ */
+export const sendCustomerOrderInvoice = async (to, orderData) => {
+  const {
+    orderNumber,
+    items = [],
+    shippingAddress = {},
+    shippingPrice,
+    totalPrice,
+  } = orderData;
+
+  const frontendBase = (
+    process.env.FRONTEND_URL || "https://shamaimveeretz.com"
+  ).replace(/\/{2,}$/, "");
+  const trackUrl = `${frontendBase}/track-order?orderId=${encodeURIComponent(String(orderNumber))}`;
+
+  const itemsList = items
+    .map(
+      (item) => `
+    <tr>
+      <td>${item.name}</td>
+      <td style="text-align:center;">${item.quantity ?? 1}</td>
+      <td style="text-align:left;">₪${item.price}</td>
+    </tr>
+  `,
+    )
+    .join("");
+
+  const addressLine = [
+    shippingAddress.name,
+    shippingAddress.street,
+    shippingAddress.city,
+    shippingAddress.zipCode,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const contentHtml = `
+    <h2 class="h2">תודה על ההזמנה!</h2>
+    <p class="p">הזמנתך התקבלה בהצלחה ומעובדת כעת בגלריה שלנו. שמור את מספר המעקב לבדיקת סטטוס ההזמנה בכל עת.</p>
+    <div class="code-box">
+      <p style="font-size:10px; font-weight:600; color:#934b19; letter-spacing:3px; text-transform:uppercase; margin:0 0 24px;">מספר מעקב</p>
+      <span class="code-text" style="font-size:20px; letter-spacing:2px;">${orderNumber}</span>
+    </div>
+    <table class="table-receipt">
+      <thead>
+        <tr>
+          <th>פריט</th>
+          <th style="text-align:center;">כמות</th>
+          <th style="text-align:left;">מחיר</th>
+        </tr>
+      </thead>
+      <tbody>${itemsList}</tbody>
+      <tfoot>
+        ${
+          shippingPrice != null
+            ? `<tr>
+          <td colspan="2" style="border:none; padding-top:16px;">משלוח</td>
+          <td style="border:none; padding-top:16px; text-align:left;">₪${shippingPrice}</td>
+        </tr>`
+            : ""
+        }
+        <tr>
+          <td colspan="2" style="padding-top:24px; font-weight:600; border:none;">סה"כ שולם</td>
+          <td style="padding-top:24px; font-weight:700; text-align:left; font-size:18px; border:none; color:#934b19;">₪${totalPrice}</td>
+        </tr>
+      </tfoot>
+    </table>
+    ${
+      addressLine
+        ? `<div style="background-color:#fffcf8; border:1px solid #e8d8a0; padding:25px; margin:30px 0;">
+      <h4 style="margin:0 0 10px; font-size:12px; text-transform:uppercase; color:#934b19;">כתובת למשלוח</h4>
+      <p style="margin:0; line-height:1.6;">${addressLine}</p>
+    </div>`
+        : ""
+    }
+    <p class="p" style="margin-bottom:0;">משלוח סטנדרטי לוקח 3-5 ימי עסקים. נעדכן אותך בכל שלב.</p>
+    <div style="text-align:center;">
+      <a href="${trackUrl}" class="btn">מעקב אחר ההזמנה</a>
+    </div>
+  `;
+
+  return await sendEmail({
+    to,
+    subject: `תודה על ההזמנה! מספר מעקב #${orderNumber} - שמים וארץ`,
+    html: generateEmailTemplate(contentHtml, "אישור הזמנה"),
+  });
+};
+
+/**
+ * New-order notification to the business owner / admin
+ */
+export const sendBusinessOwnerOrderNotification = async (orderData) => {
+  const {
+    orderNumber,
+    items = [],
+    shippingAddress = {},
+    totalPrice,
+    paymentInfo = {},
+    customerEmail,
+    userId,
+  } = orderData;
+
+  const itemsList = items
+    .map(
+      (item) => `
+    <tr>
+      <td>${item.name}</td>
+      <td style="text-align:center;">${item.quantity ?? 1}</td>
+      <td style="text-align:left;">₪${item.price}</td>
+    </tr>
+  `,
+    )
+    .join("");
+
+  const contentHtml = `
+    <h2 class="h2">התקבלה הזמנה חדשה</h2>
+    <div style="background-color:#fffcf8; border:1px solid #e8d8a0; padding:25px; margin-bottom:30px;">
+      <p style="margin:0 0 10px;"><strong>מספר הזמנה:</strong> ${orderNumber}</p>
+      ${customerEmail ? `<p style="margin:0 0 10px;"><strong>אימייל לקוח:</strong> ${customerEmail}</p>` : ""}
+      ${shippingAddress.name ? `<p style="margin:0 0 10px;"><strong>שם:</strong> ${shippingAddress.name}</p>` : ""}
+      ${shippingAddress.phone ? `<p style="margin:0 0 10px;"><strong>טלפון:</strong> ${shippingAddress.phone}</p>` : ""}
+      <p style="margin:0 0 10px;"><strong>כתובת:</strong> ${
+        [shippingAddress.street, shippingAddress.city, shippingAddress.zipCode]
+          .filter(Boolean)
+          .join(", ") || "לא צוינה"
+      }</p>
+      ${paymentInfo.transactionId ? `<p style="margin:0 0 10px;"><strong>מזהה עסקה:</strong> ${paymentInfo.transactionId}</p>` : ""}
+      <p style="margin:0;"><strong>סוג לקוח:</strong> ${userId && userId !== "guest" ? "משתמש רשום" : "אורח"}</p>
+    </div>
+    <table class="table-receipt">
+      <thead>
+        <tr>
+          <th>פריט</th>
+          <th style="text-align:center;">כמות</th>
+          <th style="text-align:left;">מחיר</th>
+        </tr>
+      </thead>
+      <tbody>${itemsList}</tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2" style="padding-top:24px; font-weight:600; border:none;">סה"כ</td>
+          <td style="padding-top:24px; font-weight:700; text-align:left; font-size:18px; border:none; color:#934b19;">₪${totalPrice}</td>
+        </tr>
+      </tfoot>
+    </table>
+  `;
+
+  return await sendEmail({
+    to: process.env.ADMIN_EMAIL || process.env.EMAIL_USER,
+    subject: `הזמנה חדשה #${orderNumber} - ₪${totalPrice}`,
+    html: generateEmailTemplate(contentHtml, "הזמנה חדשה"),
+  });
+};
+
 export const sendOrderStatusUpdate = async (to, statusData) => {
   const { orderId, status, customerName } = statusData;
   const statusMessages = {
