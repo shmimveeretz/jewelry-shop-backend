@@ -159,8 +159,8 @@ export const generatePaymentLink = async ({
  * @param {Object} options
  * @param {Object}   options.customer              - { name, email, phone?, address? }
  * @param {Array}    options.items                 - [{ name, quantity, price }]
- * @param {Array}    [options.payments]            - [{ paymentMethod, sum }]
- *   paymentMethod: 1=cash 2=check 3=bank-transfer 4=credit-card 5=other
+ * @param {Array}    [options.payments]            - [{ payment_type, amount }] or legacy [{ paymentMethod, sum }]
+ *   payment_type: credit-card | cash | bank-transfer | payment-check | other | ...
  * @param {number}   options.totalAmount           - Grand total (including VAT)
  * @param {string}   [options.currency_code]       - Default "ILS"
  * @param {string}   [options.vatType]             - PayPlus string enum (default "vat-type-included"):
@@ -169,6 +169,42 @@ export const generatePaymentLink = async ({
  * @param {boolean}  [options.sendEmail]           - Email the document to customer (default true)
  * @returns {Promise<Object>} PayPlus Books API response
  */
+const LEGACY_PAYMENT_TYPE_MAP = {
+  1: "cash",
+  2: "payment-check",
+  3: "bank-transfer",
+  4: "credit-card",
+  5: "other",
+};
+
+/** Map legacy numeric paymentMethod / sum to PayPlus Books payment objects. */
+function normalizePayPlusPayments(payments, totalAmount) {
+  const source =
+    Array.isArray(payments) && payments.length > 0
+      ? payments
+      : [{ paymentMethod: 4, sum: totalAmount }];
+
+  return source.map((payment) => {
+    if (payment.payment_type) {
+      return {
+        payment_type: payment.payment_type,
+        amount: Number(payment.amount ?? payment.sum ?? 0),
+      };
+    }
+
+    const method = payment.paymentMethod ?? payment.payment_method ?? 4;
+    const payment_type =
+      typeof method === "string" && method.includes("-")
+        ? method
+        : LEGACY_PAYMENT_TYPE_MAP[Number(method)] ?? "credit-card";
+
+    return {
+      payment_type,
+      amount: Number(payment.amount ?? payment.sum ?? 0),
+    };
+  });
+}
+
 export const createManualDocument = async (
   docType,
   {
@@ -180,6 +216,9 @@ export const createManualDocument = async (
     vatType = "vat-type-included", // PayPlus string enum — NOT a number
     remarks = "",
     sendEmail = true,
+    doc_date,
+    language,
+    transaction_uuid,
   },
 ) => {
   const VALID_DOC_TYPES = [
@@ -215,9 +254,11 @@ export const createManualDocument = async (
     throw new Error("items array is required and must not be empty");
   if (totalAmount == null) throw new Error("totalAmount is required");
 
+  const normalizedPayments = normalizePayPlusPayments(payments, totalAmount);
+
   const payload = {
     customer: {
-      name: customer.name,
+      customer_name: customer.name,
       email: customer.email || "",
       phone: customer.phone || "",
       ...(customer.address && { address: customer.address }),
@@ -227,14 +268,39 @@ export const createManualDocument = async (
       quantity: item.quantity ?? 1,
       price: item.price,
     })),
-    payments:
-      payments.length > 0 ? payments : [{ paymentMethod: 4, sum: totalAmount }], // default: credit card
-    totalAmount,
+    payments: normalizedPayments,
+    totalAmount: Number(totalAmount),
     currency_code,
-    vatType, // string enum: "vat-type-included" | "vat-type-not-included" | "vat-type-exempt"
-    send_document_email: sendEmail, // email the document to the customer
+    vatType,
+    send_document_email: sendEmail,
     ...(remarks && { more_info: remarks }),
+    ...(doc_date && { doc_date }),
+    ...(language && { language: String(language).toLowerCase() }),
+    ...(transaction_uuid && { transaction_uuid }),
   };
+
+  // #region agent log
+  fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "439f43",
+    },
+    body: JSON.stringify({
+      sessionId: "439f43",
+      hypothesisId: "D",
+      location: "payPlusAPI.js:createManualDocument:payload",
+      message: "PayPlus invoice payload normalized",
+      data: {
+        docType,
+        payments: normalizedPayments,
+        totalAmount: payload.totalAmount,
+        hasTransactionUuid: Boolean(transaction_uuid),
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
 
   console.log(
     `📤 createManualDocument [${docType}] →`,

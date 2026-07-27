@@ -753,9 +753,8 @@ export const verifyTransaction = async (req, res) => {
         totalAmount: Number(totalPrice),
         currency_code: "ILS",
         vatType: "vat-type-included",
-        language: "He",
+        language: "he",
         doc_date: today,
-        transactionUid: paymentPageRequestUid,
         sendEmail: !!customerEmail,
       }).catch((err) =>
         console.error(
