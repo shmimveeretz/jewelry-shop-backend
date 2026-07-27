@@ -738,6 +738,48 @@ export const verifyTransaction = async (req, res) => {
     // Auto-generate tax receipt via PayPlus Books (non-blocking)
     if (items.length > 0 && totalPrice > 0) {
       const today = new Date().toISOString().slice(0, 10);
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "390f6a",
+          },
+          body: JSON.stringify({
+            sessionId: "390f6a",
+            runId: "run1",
+            hypothesisId: "A,B,C,E",
+            location: "orderController.js:verifyTransaction:before-invoice",
+            message: "Order totals before invoice creation",
+            data: {
+              itemsSum: items.reduce(
+                (s, i) => s + Number(i.price) * Number(i.quantity ?? 1),
+                0,
+              ),
+              items: items.map((i) => ({
+                price: i.price,
+                priceType: typeof i.price,
+                quantity: i.quantity,
+                extraLetters: (i.selections?.extraLetters || []).length,
+              })),
+              totalPrice,
+              totalPriceType: typeof totalPrice,
+              orderDataTotalPrice: orderData.totalPrice ?? null,
+              orderDataTotalAmount: orderData.totalAmount ?? null,
+              orderDataItemsPrice: orderData.itemsPrice ?? null,
+              orderDataShippingPrice: orderData.shippingPrice ?? null,
+              couponCode: orderData.couponCode ?? null,
+              discountPercent: orderData.discountPercent ?? null,
+              txAmount: txData.amount ?? null,
+              usedPendingOrder: Boolean(pendingDoc),
+            },
+            timestamp: Date.now(),
+          }),
+        },
+      ).catch(() => {});
+      // #endregion
       createManualDocument("inv_tax_receipt", {
         customer: {
           name: customerName,
