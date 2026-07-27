@@ -168,11 +168,12 @@ export const createPaymentIntent = async (req, res) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Debug-Session-Id": "439f43",
+        "X-Debug-Session-Id": "390f6a",
       },
       body: JSON.stringify({
-        sessionId: "439f43",
-        hypothesisId: "A",
+        sessionId: "390f6a",
+        runId: "run1",
+        hypothesisId: "H1",
         location: "paymentController.js:createPaymentIntent:webhook-url",
         message: "Payment webhook callback URL built",
         data: { callbackUrl: paymentPayload.refURL_callback },
@@ -711,17 +712,19 @@ export const payPlusWebhook = async (req, res) => {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Debug-Session-Id": "439f43",
+      "X-Debug-Session-Id": "390f6a",
     },
     body: JSON.stringify({
-      sessionId: "439f43",
-      hypothesisId: "A",
+      sessionId: "390f6a",
+      runId: "run1",
+      hypothesisId: "H1,H5",
       location: "paymentController.js:payPlusWebhook:entry",
       message: "PayPlus webhook hit",
       data: {
         originalUrl: req.originalUrl,
         method: req.method,
         hasTransaction: Boolean(req.body?.transaction),
+        bodyKeys: Object.keys(req.body || {}),
       },
       timestamp: Date.now(),
     }),
@@ -752,13 +755,44 @@ export const payPlusWebhook = async (req, res) => {
     console.log("  page_request_uid:", pageRequestUid);
     console.log("  status_code:", statusCode, "| approved:", isApproved);
 
+    // #region agent log
+    const dbgWebhookBranch = (branch, extra = {}) =>
+      fetch(
+        "http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "390f6a",
+          },
+          body: JSON.stringify({
+            sessionId: "390f6a",
+            runId: "run1",
+            hypothesisId: "H2,H5",
+            location: "paymentController.js:payPlusWebhook:branch",
+            message: `Webhook branch: ${branch}`,
+            data: {
+              branch,
+              statusCode,
+              isApproved,
+              uidPrefix: pageRequestUid ? String(pageRequestUid).slice(0, 8) : null,
+              ...extra,
+            },
+            timestamp: Date.now(),
+          }),
+        },
+      ).catch(() => {});
+    // #endregion
+
     if (!isApproved) {
       console.warn(`⚠️ Webhook: not approved — status_code: ${statusCode}`);
+      dbgWebhookBranch("not-approved");
       return;
     }
 
     if (!pageRequestUid) {
       console.warn("⚠️ Webhook: no page_request_uid in payload", req.body);
+      dbgWebhookBranch("no-page-request-uid");
       return;
     }
 
@@ -768,8 +802,13 @@ export const payPlusWebhook = async (req, res) => {
     });
     if (existing) {
       console.log(`ℹ️ Webhook: order already exists for ${pageRequestUid}`);
+      dbgWebhookBranch("order-already-exists", {
+        existingOrderId: existing.orderId ?? null,
+      });
       return;
     }
+
+    dbgWebhookBranch("proceeding-to-save");
 
     // Retrieve the pending order we stored before redirecting to PayPlus
     const pendingDoc = await PendingOrderMongo.findOne({ pageRequestUid });
@@ -898,11 +937,59 @@ export const payPlusWebhook = async (req, res) => {
         ? sendCustomerOrderInvoice(customerEmail, emailPayload)
         : Promise.resolve(),
       sendBusinessOwnerOrderNotification(emailPayload),
-    ]).catch((err) =>
-      console.error("❌ Webhook order email failed:", err.message),
-    );
+    ])
+      .then(([customerResult, adminResult]) => {
+        // #region agent log
+        fetch(
+          "http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Debug-Session-Id": "390f6a",
+            },
+            body: JSON.stringify({
+              sessionId: "390f6a",
+              runId: "run1",
+              hypothesisId: "H3,H4",
+              location: "paymentController.js:payPlusWebhook:email-results",
+              message: "Webhook email send results",
+              data: {
+                customerEmail: customerEmail || "(empty)",
+                customerResult: customerResult ?? "(skipped - no email)",
+                adminResult,
+                adminTo:
+                  process.env.ADMIN_EMAIL || process.env.EMAIL_USER || null,
+              },
+              timestamp: Date.now(),
+            }),
+          },
+        ).catch(() => {});
+        // #endregion
+      })
+      .catch((err) =>
+        console.error("❌ Webhook order email failed:", err.message),
+      );
   } catch (error) {
     console.error("❌ Webhook processing error:", error.message);
+    // #region agent log
+    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "390f6a",
+      },
+      body: JSON.stringify({
+        sessionId: "390f6a",
+        runId: "run1",
+        hypothesisId: "H2,H5",
+        location: "paymentController.js:payPlusWebhook:processing-error",
+        message: "Webhook processing threw",
+        data: { errorMessage: error.message },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     // Response already sent — just log
   }
 };

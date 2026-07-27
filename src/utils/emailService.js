@@ -191,6 +191,29 @@ export const sendEmail = async (mailOptions) => {
       msg.replyTo = mailOptions.replyTo;
     }
     const result = await sgMail.send(msg);
+    // #region agent log
+    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "390f6a",
+      },
+      body: JSON.stringify({
+        sessionId: "390f6a",
+        runId: "run1",
+        hypothesisId: "H4",
+        location: "emailService.js:sendEmail:success",
+        message: "SendGrid accepted email",
+        data: {
+          to: msg.to,
+          from: msg.from,
+          subject: msg.subject,
+          sgStatusCode: result[0]?.statusCode ?? null,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     return {
       success: true,
       message: "Email sent successfully",
@@ -198,6 +221,31 @@ export const sendEmail = async (mailOptions) => {
     };
   } catch (error) {
     console.error("Email Service Error:", error.message);
+    // #region agent log
+    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "390f6a",
+      },
+      body: JSON.stringify({
+        sessionId: "390f6a",
+        runId: "run1",
+        hypothesisId: "H4",
+        location: "emailService.js:sendEmail:error",
+        message: "SendGrid send failed (swallowed)",
+        data: {
+          to: mailOptions.to,
+          from: process.env.EMAIL_USER || "noreply@shamaimveeretz.com",
+          subject: mailOptions.subject,
+          errorMessage: error.message,
+          sgErrors: error.response?.body?.errors ?? null,
+          sgStatusCode: error.code ?? error.response?.statusCode ?? null,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     return { success: false, message: error.message };
   }
 };
