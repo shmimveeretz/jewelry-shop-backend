@@ -16,6 +16,7 @@ import {
   getTransactionByPageRequestUid,
 } from "../utils/payPlusAPI.js";
 import { getExtraLetterPerBraceletCost, formatItemNameWithExtraLetters, allowsExtraLettersPricing, normalizeExtraHebrewLetters, MAX_EXTRA_LETTERS } from "../utils/extraHebrewLetters.js";
+import { buildBackendUrl } from "../utils/backendUrl.js";
 
 // @desc    Verify PayPlus payment and save order to DB
 // @route   GET /api/payment/verify/:transactionUid
@@ -154,13 +155,31 @@ export const createPaymentIntent = async (req, res) => {
       items: formattedItems,
       sendEmailApproval: true,
       sendEmailFailure: false,
-      refURL_callback: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/payment/webhook`,
+      refURL_callback: buildBackendUrl("/api/payment/webhook"),
       refURL_success: `${frontendBase}/payment-success`,
       refURL_failure: `${frontendBase}/payment-failure`,
       initial_invoice: true,
       hide_identification_id: false,
       more_info: orderId, // Send order ID in more_info
     };
+
+    // #region agent log
+    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "439f43",
+      },
+      body: JSON.stringify({
+        sessionId: "439f43",
+        hypothesisId: "A",
+        location: "paymentController.js:createPaymentIntent:webhook-url",
+        message: "Payment webhook callback URL built",
+        data: { callbackUrl: paymentPayload.refURL_callback },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
 
     console.log(
       "📤 Sending to PayPlus:",
@@ -687,6 +706,28 @@ export const debugOrder = async (req, res) => {
 // save the order asynchronously using the PendingOrder we stored
 // when the payment link was created.
 export const payPlusWebhook = async (req, res) => {
+  // #region agent log
+  fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "439f43",
+    },
+    body: JSON.stringify({
+      sessionId: "439f43",
+      hypothesisId: "A",
+      location: "paymentController.js:payPlusWebhook:entry",
+      message: "PayPlus webhook hit",
+      data: {
+        originalUrl: req.originalUrl,
+        method: req.method,
+        hasTransaction: Boolean(req.body?.transaction),
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+
   // Respond immediately — PayPlus requires a fast 200
   res.status(200).send("OK");
 
@@ -967,7 +1008,7 @@ export const generatePaymentLinkHandler = async (req, res) => {
       items: validatedItems,
       successUrl,
       failureUrl,
-      notifyUrl: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/payment/webhook`,
+      notifyUrl: buildBackendUrl("/api/payment/webhook"),
     });
 
     res.json({

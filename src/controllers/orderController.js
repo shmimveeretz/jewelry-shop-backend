@@ -4,6 +4,7 @@ import UserMongo from "../models/UserMongo.js";
 import ProductMongo from "../models/ProductMongo.js";
 import {
   getTransactionByPageRequestUid,
+  isPayPlusTransactionApproved,
   createManualDocument,
 } from "../utils/payPlusAPI.js";
 import {
@@ -599,18 +600,28 @@ export const verifyTransaction = async (req, res) => {
 
     // Verify the payment server-side with PayPlus
     console.log("🔍 Verifying transaction:", paymentPageRequestUid);
+    // #region agent log
+    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "439f43",
+      },
+      body: JSON.stringify({
+        sessionId: "439f43",
+        hypothesisId: "C",
+        location: "orderController.js:verifyTransaction:before-payplus",
+        message: "verifyTransaction starting PayPlus lookup",
+        data: { uidPrefix: String(paymentPageRequestUid).slice(0, 8) },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     const payPlusResponse = await getTransactionByPageRequestUid(
       paymentPageRequestUid,
     );
 
-    // PayPlus returns results.status 1 for approved transactions
-    const txStatus =
-      payPlusResponse?.results?.status ?? payPlusResponse?.data?.status ?? null;
-    const isApproved =
-      txStatus === 1 ||
-      txStatus === "1" ||
-      txStatus === "approved" ||
-      payPlusResponse?.data?.payment_status === "completed";
+    const isApproved = isPayPlusTransactionApproved(payPlusResponse);
 
     if (!isApproved) {
       console.warn("⚠️ PayPlus transaction not approved:", payPlusResponse);
@@ -622,7 +633,11 @@ export const verifyTransaction = async (req, res) => {
     }
 
     // Build order from PendingOrder + PayPlus data + optional orderData from frontend
-    const txData = payPlusResponse?.data ?? {};
+    const txData =
+      payPlusResponse?.transaction ??
+      payPlusResponse?.data?.transaction ??
+      payPlusResponse?.data ??
+      {};
     const orderData = {
       ...pendingOrderData,
       ...(orderDataFromBody ?? {}),

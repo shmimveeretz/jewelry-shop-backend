@@ -10,12 +10,19 @@ const payPlusAPI = axios.create({
   },
 });
 
-// Set Authorization at request time (after dotenv.config() has run)
+// Set Authorization at request time (after dotenv.config() has run).
+// PayPlus docs also accept api-key / secret-key headers; both are sent for compatibility.
 payPlusAPI.interceptors.request.use((config) => {
-  config.headers.Authorization = JSON.stringify({
-    api_key: process.env.PAYPLUS_PUBLIC_KEY,
-    secret_key: process.env.PAYPLUS_SECRET_KEY,
-  });
+  const apiKey = process.env.PAYPLUS_PUBLIC_KEY;
+  const secretKey = process.env.PAYPLUS_SECRET_KEY;
+  if (apiKey && secretKey) {
+    config.headers.Authorization = JSON.stringify({
+      api_key: apiKey,
+      secret_key: secretKey,
+    });
+    config.headers["api-key"] = apiKey;
+    config.headers["secret-key"] = secretKey;
+  }
   return config;
 });
 
@@ -262,20 +269,121 @@ export const createManualDocument = async (
 };
 
 /**
- * Get transaction details by payment page request UID
- * @param {string} pageRequestUid - PayPlus page_request_uid
+ * Get transaction details by payment page request UID.
+ * Uses PayPlus IPN Full (documented lookup) — GetTransactionDetails returns 403 on many accounts.
+ * @param {string} pageRequestUid - PayPlus page_request_uid / payment_page_request_uid
  * @returns {Promise<Object>} Transaction details
  */
 export const getTransactionByPageRequestUid = async (pageRequestUid) => {
+  // #region agent log
+  fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "439f43",
+    },
+    body: JSON.stringify({
+      sessionId: "439f43",
+      hypothesisId: "B",
+      location: "payPlusAPI.js:getTransactionByPageRequestUid:entry",
+      message: "PayPlus transaction lookup start",
+      data: {
+        uidPrefix: String(pageRequestUid).slice(0, 8),
+        apiUrl: PAYPLUS_BASE_URL,
+        hasPublicKey: Boolean(process.env.PAYPLUS_PUBLIC_KEY),
+        hasSecretKey: Boolean(process.env.PAYPLUS_SECRET_KEY),
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+
   try {
-    const response = await payPlusAPI.get(
-      `/PaymentPages/GetTransactionDetails/${pageRequestUid}`,
-    );
+    const response = await payPlusAPI.post("/PaymentPages/ipn-full", {
+      payment_request_uid: pageRequestUid,
+    });
+
+    // #region agent log
+    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "439f43",
+      },
+      body: JSON.stringify({
+        sessionId: "439f43",
+        hypothesisId: "B",
+        location: "payPlusAPI.js:getTransactionByPageRequestUid:success",
+        message: "PayPlus ipn-full succeeded",
+        data: {
+          resultsStatus: response.data?.results?.status ?? null,
+          statusCode:
+            response.data?.data?.status_code ??
+            response.data?.transaction?.status_code ??
+            null,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
     return response.data;
   } catch (error) {
-    console.error("PayPlus API Error:", error.response?.data || error.message);
+    const status = error.response?.status;
+    const detail = error.response?.data ?? error.message;
+
+    console.error(
+      "PayPlus ipn-full error:",
+      status,
+      typeof detail === "object" ? JSON.stringify(detail) : detail,
+    );
+
+    // #region agent log
+    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "439f43",
+      },
+      body: JSON.stringify({
+        sessionId: "439f43",
+        hypothesisId: "B",
+        location: "payPlusAPI.js:getTransactionByPageRequestUid:error",
+        message: "PayPlus ipn-full failed",
+        data: { httpStatus: status ?? null, detailType: typeof detail },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
     throw new Error("Failed to fetch transaction by page request UID");
   }
+};
+
+/** Whether a PayPlus ipn-full / redirect payload indicates an approved charge. */
+export const isPayPlusTransactionApproved = (payPlusResponse) => {
+  const tx =
+    payPlusResponse?.transaction ??
+    payPlusResponse?.data?.transaction ??
+    payPlusResponse?.data ??
+    {};
+
+  const statusCode = tx.status_code ?? payPlusResponse?.data?.status_code ?? null;
+  const txStatus =
+    payPlusResponse?.results?.status ?? tx.status ?? payPlusResponse?.data?.status ?? null;
+
+  return (
+    statusCode === "000" ||
+    statusCode === 0 ||
+    statusCode === "0" ||
+    txStatus === 1 ||
+    txStatus === "1" ||
+    txStatus === "success" ||
+    txStatus === "approved" ||
+    tx.status === "approved" ||
+    tx.payment_status === "completed" ||
+    payPlusResponse?.data?.payment_status === "completed"
+  );
 };
 
 /**

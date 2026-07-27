@@ -111,6 +111,32 @@ app.use("/api", async (req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Normalize double-slash paths (PayPlus webhook URL had //api/... when BACKEND_URL ended with /)
+app.use((req, res, next) => {
+  if (req.url.includes("//")) {
+    const normalized = req.url.replace(/\/{2,}/g, "/");
+    // #region agent log
+    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "439f43",
+      },
+      body: JSON.stringify({
+        sessionId: "439f43",
+        hypothesisId: "A",
+        location: "server.js:path-normalize",
+        message: "Normalized double-slash request path",
+        data: { from: req.url, to: normalized },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+    req.url = normalized;
+  }
+  next();
+});
+
 // Serve static files (logo, images, etc.)
 app.use("/public", express.static("public"));
 

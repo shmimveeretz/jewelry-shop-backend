@@ -12,7 +12,7 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import OrderMongo from "../src/models/OrderMongo.js";
 import PendingOrderMongo from "../src/models/PendingOrderMongo.js";
-import { getTransactionByPageRequestUid } from "../src/utils/payPlusAPI.js";
+import { getTransactionByPageRequestUid, isPayPlusTransactionApproved } from "../src/utils/payPlusAPI.js";
 
 dotenv.config();
 
@@ -30,14 +30,7 @@ if (!uid) {
 }
 
 function isApproved(payPlusResponse) {
-  const txStatus =
-    payPlusResponse?.results?.status ?? payPlusResponse?.data?.status ?? null;
-  return (
-    txStatus === 1 ||
-    txStatus === "1" ||
-    txStatus === "approved" ||
-    payPlusResponse?.data?.payment_status === "completed"
-  );
+  return isPayPlusTransactionApproved(payPlusResponse);
 }
 
 function buildOrderFromSources(orderData, txData, transactionUid) {
