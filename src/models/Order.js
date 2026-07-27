@@ -1,4 +1,5 @@
 import OrderMongo from "./OrderMongo.js";
+import { formatItemNameWithExtraLetters } from "../utils/extraHebrewLetters.js";
 
 class OrderModel {
   constructor() {
@@ -84,6 +85,7 @@ class OrderModel {
       return {
         orderId: order.orderId,
         status: order.status,
+        trackingNumber: order.trackingNumber || "",
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
         items: order.items,
@@ -176,13 +178,30 @@ class OrderModel {
         customerName: orderData.customerName,
         customerEmail: orderData.customerEmail,
         customerPhone: orderData.customerPhone || "",
-        items: (orderData.items || []).map((item) => ({
-          productId: item.productId || item.id || "",
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity || 1,
-          selectedOptions: item.selectedOptions || {},
-        })),
+        items: (orderData.items || []).map((item) => {
+          const selections = item.selections || {};
+          const extraLetters = Array.isArray(selections.extraLetters)
+            ? selections.extraLetters
+            : Array.isArray(item.selectedOptions?.extraLetters)
+              ? item.selectedOptions.extraLetters
+              : [];
+          return {
+            productId: item.productId || item.id || "",
+            name: formatItemNameWithExtraLetters(item.name, extraLetters),
+            price: item.price,
+            quantity: item.quantity || 1,
+            selectedOptions: item.selectedOptions || {},
+            selections: {
+              metalType: selections.metalType || item.selectedOptions?.metalType || "",
+              length: selections.length || item.selectedOptions?.length || "",
+              jewelryType:
+                selections.jewelryType ||
+                item.selectedOptions?.jewelryType ||
+                "",
+              extraLetters,
+            },
+          };
+        }),
         shippingAddress: {
           fullName:
             orderData.shippingAddress?.fullName || orderData.customerName,
@@ -218,6 +237,7 @@ class OrderModel {
       email: order.email || order.customerEmail,
       items: order.items,
       shippingAddress: order.shippingAddress,
+      trackingNumber: order.trackingNumber || "",
       itemsPrice: order.itemsPrice,
       shippingPrice: order.shippingPrice,
       totalPrice: order.totalPrice,

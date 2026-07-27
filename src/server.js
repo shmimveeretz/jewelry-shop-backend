@@ -43,6 +43,10 @@ const allowedOrigins = [
   "https://www.shmimveeretz.netlify.app",
   "https://shamaimveeretz.com", // Another typo variant
   "https://www.shamaimveeretz.com", // Another typo variant
+  // Local Vite dev server (NODE_ENV=development in Backend/.env)
+  ...(process.env.NODE_ENV !== "production"
+    ? ["http://localhost:5173", "http://127.0.0.1:5173"]
+    : []),
 ].filter(Boolean);
 
 console.log("📝 CORS Allowed Origins:", allowedOrigins);

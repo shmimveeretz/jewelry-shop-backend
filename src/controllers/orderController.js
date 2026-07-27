@@ -10,12 +10,16 @@ import {
   sendBusinessOwnerOrderNotification,
   sendCustomerOrderInvoice,
   sendOrderStatusUpdate,
+  sendOrderTrackingUpdate,
 } from "../utils/emailService.js";
 import PendingOrderMongo from "../models/PendingOrderMongo.js";
 import {
   normalizeExtraHebrewLetters,
   isValidHebrewLetter,
   getExtraLetterPerBraceletCost,
+  formatItemNameWithExtraLetters,
+  allowsExtraLettersPricing,
+  MAX_EXTRA_LETTERS,
 } from "../utils/extraHebrewLetters.js";
 
 
@@ -197,6 +201,7 @@ export const trackOrderByOrderId = async (req, res) => {
       data: {
         orderId: order.orderId,
         status: order.status,
+        trackingNumber: order.trackingNumber || "",
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
         items: (order.items || []).map((item) => ({
@@ -274,6 +279,7 @@ export const updateOrderStatus = async (req, res) => {
           updatedOrder.customerName ||
           updatedOrder.shippingAddress?.fullName ||
           "",
+        trackingNumber: updatedOrder.trackingNumber || "",
       })
         .then((r) =>
           console.log(
@@ -298,6 +304,85 @@ export const updateOrderStatus = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Error updating order status:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Update order shipment tracking number
+// @route   PUT /api/orders/:id/tracking
+// @access  Private/Admin
+export const updateOrderTracking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const trackingNumber = String(req.body.trackingNumber ?? "").trim();
+
+    if (trackingNumber.length > 120) {
+      return res.status(400).json({
+        success: false,
+        message: "מספר מעקב ארוך מדי",
+      });
+    }
+
+    const existingOrder = await OrderMongo.findById(id).lean();
+    if (!existingOrder) {
+      return res.status(404).json({
+        success: false,
+        message: "הזמנה לא נמצאה",
+      });
+    }
+    const previousTracking = existingOrder.trackingNumber || "";
+
+    const updatedOrder = await Order.update(id, { trackingNumber });
+    if (!updatedOrder) {
+      return res.status(404).json({
+        success: false,
+        message: "הזמנה לא נמצאה",
+      });
+    }
+
+    console.log(
+      `✅ Tracking number ${trackingNumber ? `set to "${trackingNumber}"` : "cleared"} for order ${id}`,
+    );
+
+    // Email the customer the tracking number + quick-track button (non-blocking).
+    // Only when a non-empty tracking number was set or changed.
+    const customerEmail = updatedOrder.customerEmail || updatedOrder.email;
+    let emailSent = false;
+    if (trackingNumber && trackingNumber !== previousTracking && customerEmail) {
+      emailSent = true;
+      sendOrderTrackingUpdate(customerEmail, {
+        orderId: updatedOrder.orderId || updatedOrder.id,
+        customerName:
+          updatedOrder.customerName ||
+          updatedOrder.shippingAddress?.fullName ||
+          "",
+        trackingNumber,
+      })
+        .then((r) =>
+          console.log(
+            r.success
+              ? `📧 Tracking email sent to ${customerEmail}`
+              : `❌ Tracking email failed: ${r.message}`,
+          ),
+        )
+        .catch((err) =>
+          console.error("❌ Tracking email error:", err.message),
+        );
+    }
+
+    res.json({
+      success: true,
+      message: emailSent
+        ? "מספר המעקב עודכן ונשלח ללקוח במייל"
+        : "מספר המעקב עודכן בהצלחה",
+      emailSent,
+      data: updatedOrder,
+    });
+  } catch (error) {
+    console.error("❌ Error updating tracking number:", error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -370,13 +455,28 @@ export const orderSuccess = async (req, res) => {
       customerName,
       customerEmail,
       customerPhone: customerPhone || "",
-      items: items.map((item) => ({
-        productId: item.productId || item.id || "",
-        name: item.name,
-        price: Number(item.price),
-        quantity: item.quantity ?? 1,
-        selectedOptions: item.selectedOptions || {},
-      })),
+      items: items.map((item) => {
+        const selections = item.selections || {};
+        const extraLetters = Array.isArray(selections.extraLetters)
+          ? selections.extraLetters
+          : Array.isArray(item.selectedOptions?.extraLetters)
+            ? item.selectedOptions.extraLetters
+            : [];
+        return {
+          productId: item.productId || item.id || "",
+          name: formatItemNameWithExtraLetters(item.name, extraLetters),
+          price: Number(item.price),
+          quantity: item.quantity ?? 1,
+          selectedOptions: item.selectedOptions || {},
+          selections: {
+            metalType: selections.metalType || item.selectedOptions?.metalType || "",
+            length: selections.length || item.selectedOptions?.length || "",
+            jewelryType:
+              selections.jewelryType || item.selectedOptions?.jewelryType || "",
+            extraLetters,
+          },
+        };
+      }),
       shippingAddress: {
         fullName:
           shippingAddress?.fullName || shippingAddress?.name || customerName,
@@ -543,7 +643,7 @@ export const verifyTransaction = async (req, res) => {
       Number(txData.amount) ??
       0;
 
-    const items =
+    const items = (
       orderData.items ??
       (txData.items || []).map((i) => ({
         productId: i.product_uid || "",
@@ -551,7 +651,29 @@ export const verifyTransaction = async (req, res) => {
         price: Number(i.price),
         quantity: Number(i.quantity) || 1,
         selectedOptions: {},
-      }));
+        selections: {},
+      }))
+    ).map((item) => {
+      const selections = item.selections || {};
+      const extraLetters = Array.isArray(selections.extraLetters)
+        ? selections.extraLetters
+        : Array.isArray(item.selectedOptions?.extraLetters)
+          ? item.selectedOptions.extraLetters
+          : [];
+      return {
+        productId: item.productId || item.id || "",
+        name: formatItemNameWithExtraLetters(item.name, extraLetters),
+        price: Number(item.price),
+        quantity: item.quantity ?? 1,
+        selectedOptions: item.selectedOptions || {},
+        selections: {
+          metalType: selections.metalType || "",
+          length: selections.length || "",
+          jewelryType: selections.jewelryType || "",
+          extraLetters,
+        },
+      };
+    });
 
     const publicOrderId =
       orderData.orderId ||
@@ -839,28 +961,20 @@ export const addToCart = async (req, res) => {
     let extraLettersCost = 0;
     let sanitizedExtraLetters = [];
 
-    if (product.id === "letter-chain") {
-      sanitizedExtraLetters = normalizedExtraLetters;
-      const perLetterCost = getExtraLetterPerBraceletCost(
-        product.priceAdditions,
-        metalType,
-      );
-      extraLettersCost = sanitizedExtraLetters.length * perLetterCost;
-    } else if (jewelryType === "צמיד") {
-      sanitizedExtraLetters = normalizedExtraLetters;
+    if (allowsExtraLettersPricing(product, jewelryType)) {
+      sanitizedExtraLetters = normalizedExtraLetters.slice(0, MAX_EXTRA_LETTERS);
       const perLetterCost = getExtraLetterPerBraceletCost(
         product.priceAdditions,
         metalType,
       );
       extraLettersCost = sanitizedExtraLetters.length * perLetterCost;
     }
-    // For non-bracelet types, extraLetters is intentionally discarded
 
     const unitPrice = basePrice + metalAddition + extraLettersCost;
 
     const cartItem = {
       productId: product.id,
-      name: product.name,
+      name: formatItemNameWithExtraLetters(product.name, sanitizedExtraLetters),
       price: unitPrice,
       quantity: parsedQty,
       selections: {

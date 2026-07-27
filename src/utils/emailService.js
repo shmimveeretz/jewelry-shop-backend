@@ -409,7 +409,7 @@ export const sendBusinessOwnerOrderNotification = async (orderData) => {
 };
 
 export const sendOrderStatusUpdate = async (to, statusData) => {
-  const { orderId, status, customerName } = statusData;
+  const { orderId, status, customerName, trackingNumber } = statusData;
   const statusMessages = {
     // DB enum statuses (English)
     Pending: "ההזמנה התקבלה וממתינה לאישור",
@@ -432,9 +432,14 @@ export const sendOrderStatusUpdate = async (to, statusData) => {
       <p style="font-size:12px; color:#934b19; letter-spacing:2px; text-transform:uppercase; margin:0 0 12px;">סטטוס נוכחי</p>
       <p style="font-family:'Noto Serif', serif; font-size:22px; font-weight:600; margin:0;">${statusMessages[status] || status}</p>
       <p style="font-size:14px; color:#7f8c8d; margin-top:12px;">מספר הזמנה: ${orderId}</p>
+      ${
+        trackingNumber
+          ? `<p style="font-size:14px; color:#7f8c8d; margin-top:6px;">מספר מעקב למשלוח: <span style="direction:ltr; unicode-bidi:embed; font-weight:600; color:#2c3e50;">${trackingNumber}</span></p>`
+          : ""
+      }
     </div>
     <div style="text-align:center;">
-      <a href="${process.env.FRONTEND_URL}/track-order?orderId=${orderId}" class="btn">לפרטים נוספים</a>
+      <a href="${process.env.FRONTEND_URL}/track-order?orderId=${orderId}" class="btn">מעקב מהיר אחר ההזמנה</a>
     </div>
   `;
 
@@ -442,6 +447,34 @@ export const sendOrderStatusUpdate = async (to, statusData) => {
     to,
     subject: `עדכון לגבי הזמנה #${orderId} - שמים וארץ`,
     html: generateEmailTemplate(contentHtml, "עדכון הזמנה"),
+  });
+};
+
+/**
+ * Sent when the admin sets/updates the shipment tracking number.
+ * Gives the customer the tracking number + a one-click order tracking button.
+ */
+export const sendOrderTrackingUpdate = async (to, trackingData) => {
+  const { orderId, customerName, trackingNumber } = trackingData;
+
+  const contentHtml = `
+    <h2 class="h2">החבילה שלך בדרך אליך</h2>
+    <p class="p">שלום ${customerName || "לקוח יקר"}, ההזמנה שלך נמסרה לחברת המשלוחים. ניתן לעקוב אחריה באמצעות מספר המעקב הבא:</p>
+    <div class="code-box">
+      <p style="font-size:10px; font-weight:600; color:#934b19; letter-spacing:3px; text-transform:uppercase; margin:0 0 24px;">מספר מעקב למשלוח</p>
+      <span class="code-text" style="letter-spacing:3px; font-size:26px; direction:ltr; unicode-bidi:embed;">${trackingNumber}</span>
+      <p style="font-size:13px; color:#4d4635; margin-top:24px; opacity:0.8;">מספר הזמנה: ${orderId}</p>
+    </div>
+    <div style="text-align:center;">
+      <a href="${process.env.FRONTEND_URL}/track-order?orderId=${orderId}" class="btn">מעקב מהיר אחר ההזמנה</a>
+    </div>
+    <p class="p" style="font-size:14px; opacity:0.7; margin-top:28px; text-align:center;">בלחיצה על הכפתור תועברו לדף מעקב ההזמנה באתר — ללא צורך בהתחברות.</p>
+  `;
+
+  return await sendEmail({
+    to,
+    subject: `ההזמנה שלך נשלחה - מספר מעקב #${orderId} - שמים וארץ`,
+    html: generateEmailTemplate(contentHtml, "מספר מעקב למשלוח"),
   });
 };
 

@@ -47,6 +47,7 @@ const OrderSchema = new mongoose.Schema(
       city: String,
       zipCode: String,
     },
+    trackingNumber: { type: String, default: "" },
 
     // Pricing
     itemsPrice: { type: Number, default: 0 },

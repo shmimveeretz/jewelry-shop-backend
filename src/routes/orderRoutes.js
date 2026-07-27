@@ -5,6 +5,7 @@ import {
   createOrder,
   getOrderById,
   updateOrderStatus,
+  updateOrderTracking,
   deleteOrder,
   orderSuccess,
   verifyTransaction,
@@ -50,6 +51,7 @@ router.get("/coupon-stats", protect, admin, getCouponStats); // Admin only - cou
 router.post("/", protect, createOrder); // Any authenticated user can create order
 router.get("/:id", protect, getOrderById); // Get specific order
 router.put("/:id/status", protect, admin, updateOrderStatus); // Admin only - update status
+router.put("/:id/tracking", protect, admin, updateOrderTracking); // Admin only - set shipment tracking number
 router.delete("/:id", protect, admin, deleteOrder); // Admin only - delete order
 
 export default router;

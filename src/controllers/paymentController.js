@@ -15,7 +15,7 @@ import {
   createManualDocument,
   getTransactionByPageRequestUid,
 } from "../utils/payPlusAPI.js";
-import { getExtraLetterPerBraceletCost } from "../utils/extraHebrewLetters.js";
+import { getExtraLetterPerBraceletCost, formatItemNameWithExtraLetters, allowsExtraLettersPricing, normalizeExtraHebrewLetters, MAX_EXTRA_LETTERS } from "../utils/extraHebrewLetters.js";
 
 // @desc    Verify PayPlus payment and save order to DB
 // @route   GET /api/payment/verify/:transactionUid
@@ -190,13 +190,25 @@ export const createPaymentIntent = async (req, res) => {
           customerName: customer.customer_name,
           customerEmail: customer.email,
           customerPhone: customer.phone,
-          items: (sourceItems || []).map((i) => ({
-            productId: i.productId || "",
-            name: i.name,
-            price: i.price,
-            quantity: i.quantity || 1,
-            selectedOptions: i.selectedOptions || {},
-          })),
+          items: (sourceItems || []).map((i) => {
+            const selections = i.selections || i.selectedOptions || {};
+            const extraLetters = Array.isArray(selections.extraLetters)
+              ? selections.extraLetters
+              : [];
+            return {
+              productId: i.productId || "",
+              name: formatItemNameWithExtraLetters(i.name, extraLetters),
+              price: i.price,
+              quantity: i.quantity || 1,
+              selectedOptions: i.selectedOptions || {},
+              selections: {
+                metalType: selections.metalType || "",
+                length: selections.length || "",
+                jewelryType: selections.jewelryType || "",
+                extraLetters,
+              },
+            };
+          }),
           shippingAddress: {
             fullName: customer.customer_name,
             address: shippingAddress?.street || shippingAddress?.address || "",
@@ -744,7 +756,7 @@ export const payPlusWebhook = async (req, res) => {
       Number(transaction.amount) ??
       0;
 
-    const items =
+    const items = (
       orderData.items ??
       (transaction.items || []).map((i) => ({
         productId: "",
@@ -752,7 +764,29 @@ export const payPlusWebhook = async (req, res) => {
         price: Number(i.price),
         quantity: Number(i.quantity) || 1,
         selectedOptions: {},
-      }));
+        selections: {},
+      }))
+    ).map((item) => {
+      const selections = item.selections || {};
+      const extraLetters = Array.isArray(selections.extraLetters)
+        ? selections.extraLetters
+        : Array.isArray(item.selectedOptions?.extraLetters)
+          ? item.selectedOptions.extraLetters
+          : [];
+      return {
+        productId: item.productId || "",
+        name: formatItemNameWithExtraLetters(item.name, extraLetters),
+        price: Number(item.price),
+        quantity: item.quantity ?? 1,
+        selectedOptions: item.selectedOptions || {},
+        selections: {
+          metalType: selections.metalType || "",
+          length: selections.length || "",
+          jewelryType: selections.jewelryType || "",
+          extraLetters,
+        },
+      };
+    });
 
     const publicOrderId =
       orderData.orderId ||
@@ -876,21 +910,15 @@ export const generatePaymentLinkHandler = async (req, res) => {
           const sel = item.selections || item.selectedOptions || {};
           const metalType = sel.metalType ?? "";
           const jewelryType = sel.jewelryType ?? "";
-          const extraLetters = Array.isArray(sel.extraLetters)
-            ? sel.extraLetters
-            : [];
+          const extraLetters = normalizeExtraHebrewLetters(
+            Array.isArray(sel.extraLetters) ? sel.extraLetters : [],
+          ).slice(0, MAX_EXTRA_LETTERS);
 
           const metalAddition =
             product.priceAdditions?.metalType?.[metalType] ?? 0;
 
           let extraLettersCost = 0;
-          if (product.id === "letter-chain") {
-            const perLetter = getExtraLetterPerBraceletCost(
-              product.priceAdditions,
-              metalType,
-            );
-            extraLettersCost = extraLetters.length * perLetter;
-          } else if (jewelryType === "צמיד") {
+          if (allowsExtraLettersPricing(product, jewelryType)) {
             const perLetter = getExtraLetterPerBraceletCost(
               product.priceAdditions,
               metalType,
@@ -903,8 +931,17 @@ export const generatePaymentLinkHandler = async (req, res) => {
 
           return {
             ...item,
-            name: item.name || product.name,
+            name: formatItemNameWithExtraLetters(
+              item.name || product.name,
+              extraLetters,
+            ),
             price: unitPrice,
+            selections: {
+              metalType,
+              length: sel.length ?? "",
+              jewelryType,
+              extraLetters,
+            },
           };
         }),
       );
