@@ -280,48 +280,26 @@ export const createManualDocument = async (
   };
 
   // #region agent log
-  {
-    const itemsSum = payload.items.reduce(
-      (s, i) => s + Number(i.price) * Number(i.quantity),
-      0,
-    );
-    const paymentsSum = normalizedPayments.reduce(
-      (s, p) => s + Number(p.amount),
-      0,
-    );
-    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "390f6a",
+  fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "439f43",
+    },
+    body: JSON.stringify({
+      sessionId: "439f43",
+      hypothesisId: "D",
+      location: "payPlusAPI.js:createManualDocument:payload",
+      message: "PayPlus invoice payload normalized",
+      data: {
+        docType,
+        payments: normalizedPayments,
+        totalAmount: payload.totalAmount,
+        hasTransactionUuid: Boolean(transaction_uuid),
       },
-      body: JSON.stringify({
-        sessionId: "390f6a",
-        runId: "run1",
-        hypothesisId: "A,B,C,D,E",
-        location: "payPlusAPI.js:createManualDocument:payload",
-        message: "PayPlus invoice payload totals",
-        data: {
-          docType,
-          items: payload.items.map((i) => ({
-            price: i.price,
-            priceType: typeof i.price,
-            quantity: i.quantity,
-            quantityType: typeof i.quantity,
-            line: Number(i.price) * Number(i.quantity),
-          })),
-          itemsSum,
-          itemsSumRounded: Math.round(itemsSum * 100) / 100,
-          paymentsSum,
-          totalAmount: payload.totalAmount,
-          diffItemsVsTotal: itemsSum - payload.totalAmount,
-          diffPaymentsVsTotal: paymentsSum - payload.totalAmount,
-          vatType: payload.vatType,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-  }
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
   // #endregion
 
   console.log(
@@ -347,32 +325,6 @@ export const createManualDocument = async (
       `❌ createManualDocument [${docType}] error:`,
       JSON.stringify(detail),
     );
-
-    // #region agent log
-    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "390f6a",
-      },
-      body: JSON.stringify({
-        sessionId: "390f6a",
-        runId: "run1",
-        hypothesisId: "A,B,C,D,E",
-        location: "payPlusAPI.js:createManualDocument:error",
-        message: "PayPlus books rejected document",
-        data: {
-          docType,
-          httpStatus: error.response?.status ?? null,
-          detail,
-          sentTotalAmount: payload.totalAmount,
-          sentItems: payload.items,
-          sentPayments: payload.payments,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     throw new Error(
       error.response?.data?.results?.message ||
         error.response?.data?.message ||
