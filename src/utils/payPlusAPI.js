@@ -258,7 +258,7 @@ export const createManualDocument = async (
 
   const payload = {
     customer: {
-      customer_name: customer.name,
+      name: customer.name,
       email: customer.email || "",
       phone: customer.phone || "",
       ...(customer.address && { address: customer.address }),
