@@ -586,7 +586,7 @@ router.post(
         payments: [{ paymentMethod: 4, sum: order.totalPrice }], // 4 = credit card
         totalAmount: order.totalPrice,
         currency_code: "ILS",
-        vatType: "Vat-type-included",
+        vatType: "vat-type-included",
         language: "He",
         doc_date: new Date().toISOString().slice(0, 10),
         transactionUid: order.transactionUid || undefined,

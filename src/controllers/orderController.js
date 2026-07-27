@@ -752,7 +752,7 @@ export const verifyTransaction = async (req, res) => {
         payments: [{ paymentMethod: 4, sum: Number(totalPrice) }],
         totalAmount: Number(totalPrice),
         currency_code: "ILS",
-        vatType: "Vat-type-included",
+        vatType: "vat-type-included",
         language: "He",
         doc_date: today,
         transactionUid: paymentPageRequestUid,
