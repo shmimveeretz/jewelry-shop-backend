@@ -1,5 +1,9 @@
 import sgMail from "@sendgrid/mail";
 import dotenv from "dotenv";
+// #region agent log
+import { dbg } from "./debugLog.js";
+// #endregion
+import OrderMongo from "../models/OrderMongo.js";
 dotenv.config();
 
 // Set SendGrid API key
@@ -192,27 +196,18 @@ export const sendEmail = async (mailOptions) => {
     }
     const result = await sgMail.send(msg);
     // #region agent log
-    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "390f6a",
+    dbg({
+      runId: "run2",
+      hypothesisId: "H4",
+      location: "emailService.js:sendEmail:success",
+      message: "SendGrid accepted email",
+      data: {
+        to: msg.to,
+        from: msg.from,
+        subject: msg.subject,
+        sgStatusCode: result[0]?.statusCode ?? null,
       },
-      body: JSON.stringify({
-        sessionId: "390f6a",
-        runId: "run1",
-        hypothesisId: "H4",
-        location: "emailService.js:sendEmail:success",
-        message: "SendGrid accepted email",
-        data: {
-          to: msg.to,
-          from: msg.from,
-          subject: msg.subject,
-          sgStatusCode: result[0]?.statusCode ?? null,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
+    });
     // #endregion
     return {
       success: true,
@@ -222,31 +217,141 @@ export const sendEmail = async (mailOptions) => {
   } catch (error) {
     console.error("Email Service Error:", error.message);
     // #region agent log
-    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "390f6a",
+    dbg({
+      runId: "run2",
+      hypothesisId: "H4",
+      location: "emailService.js:sendEmail:error",
+      message: "SendGrid send failed (swallowed)",
+      data: {
+        to: mailOptions.to,
+        from: process.env.EMAIL_USER || "noreply@shamaimveeretz.com",
+        subject: mailOptions.subject,
+        errorMessage: error.message,
+        sgErrors: error.response?.body?.errors ?? null,
+        sgStatusCode: error.code ?? error.response?.statusCode ?? null,
       },
-      body: JSON.stringify({
-        sessionId: "390f6a",
-        runId: "run1",
-        hypothesisId: "H4",
-        location: "emailService.js:sendEmail:error",
-        message: "SendGrid send failed (swallowed)",
-        data: {
-          to: mailOptions.to,
-          from: process.env.EMAIL_USER || "noreply@shamaimveeretz.com",
-          subject: mailOptions.subject,
-          errorMessage: error.message,
-          sgErrors: error.response?.body?.errors ?? null,
-          sgStatusCode: error.code ?? error.response?.statusCode ?? null,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
+    });
     // #endregion
     return { success: false, message: error.message };
+  }
+};
+
+/**
+ * Send customer + admin order emails at most once per order.
+ * Atomically claims the send so webhook / verifyTransaction races cannot double-mail.
+ * @param {Object} order - Mongoose order document (or lean object with _id)
+ * @param {Object} [overrides] - optional email/name overrides when building payload
+ * @returns {Promise<{skipped?: boolean, customerResult?: any, adminResult?: any}>}
+ */
+export const ensureOrderEmailsSent = async (order, overrides = {}) => {
+  if (!order?._id) {
+    return { skipped: true, reason: "no-order-id" };
+  }
+
+  const claimed = await OrderMongo.findOneAndUpdate(
+    { _id: order._id, orderEmailsSent: { $ne: true } },
+    { $set: { orderEmailsSent: true, updatedAt: Date.now() } },
+    { new: false },
+  );
+
+  if (!claimed) {
+    // #region agent log
+    dbg({
+      runId: "post-fix",
+      hypothesisId: "H2",
+      location: "emailService.js:ensureOrderEmailsSent:skipped",
+      message: "Order emails already claimed/sent",
+      data: {
+        orderId: order.orderId ?? null,
+        mongoId: String(order._id),
+      },
+    });
+    // #endregion
+    return { skipped: true, reason: "already-sent" };
+  }
+
+  const customerEmail =
+    overrides.customerEmail ||
+    order.customerEmail ||
+    order.email ||
+    "";
+  const customerPhone = overrides.customerPhone || order.customerPhone || "";
+  const customerName =
+    overrides.customerName || order.customerName || "לקוח";
+  const items = Array.isArray(order.items) ? order.items : [];
+  const publicOrderId = order.orderId || String(order._id);
+
+  const emailPayload = {
+    orderNumber: publicOrderId,
+    items: items.map((i) => ({
+      productId: i.productId || "",
+      name: i.name,
+      price: i.price,
+      quantity: i.quantity ?? 1,
+      selectedOptions: i.selectedOptions || {},
+    })),
+    shippingAddress: {
+      name: order.shippingAddress?.fullName || customerName,
+      phone: customerPhone,
+      street: order.shippingAddress?.address || "",
+      city: order.shippingAddress?.city || "",
+      zipCode: order.shippingAddress?.zipCode || "",
+      country: "ישראל",
+    },
+    itemsPrice: order.itemsPrice,
+    taxPrice: 0,
+    shippingPrice: order.shippingPrice,
+    totalPrice: order.totalPrice,
+    paymentInfo: {
+      method: "credit_card",
+      transactionId: order.transactionUid || "",
+    },
+    createdAt: order.createdAt,
+    userId: order.userId || null,
+    customerEmail,
+  };
+
+  try {
+    const [customerResult, adminResult] = await Promise.all([
+      customerEmail
+        ? sendCustomerOrderInvoice(customerEmail, emailPayload)
+        : Promise.resolve(null),
+      sendBusinessOwnerOrderNotification(emailPayload),
+    ]);
+
+    const customerFailed = customerEmail && customerResult && !customerResult.success;
+    const adminFailed = adminResult && !adminResult.success;
+    if (customerFailed && adminFailed) {
+      // Both failed — release claim so the other path can retry
+      await OrderMongo.updateOne(
+        { _id: order._id },
+        { $set: { orderEmailsSent: false } },
+      );
+    }
+
+    // #region agent log
+    dbg({
+      runId: "post-fix",
+      hypothesisId: "H2,H3,H4",
+      location: "emailService.js:ensureOrderEmailsSent:sent",
+      message: "Order emails send attempt finished",
+      data: {
+        orderId: publicOrderId,
+        customerEmail: customerEmail || "(empty)",
+        customerResult: customerResult ?? "(skipped - no email)",
+        adminResult,
+      },
+    });
+    // #endregion
+
+    return { skipped: false, customerResult, adminResult };
+  } catch (error) {
+    await OrderMongo.updateOne(
+      { _id: order._id },
+      { $set: { orderEmailsSent: false } },
+    );
+    console.error("❌ ensureOrderEmailsSent failed:", error.message);
+    throw error;
   }
 };
 

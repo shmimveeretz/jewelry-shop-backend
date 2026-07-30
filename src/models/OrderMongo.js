@@ -63,6 +63,8 @@ const OrderSchema = new mongoose.Schema(
       default: "pending",
     },
     transactionUid: { type: String },
+    // Prevents duplicate thank-you / admin emails across webhook vs verifyTransaction race
+    orderEmailsSent: { type: Boolean, default: false },
 
     // Order status
     status: {

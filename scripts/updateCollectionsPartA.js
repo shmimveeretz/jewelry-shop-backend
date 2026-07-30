@@ -50,7 +50,7 @@ const SYMBOL_QUOTES = {
     sourceEn: "Psalms 150:3",
   },
   "third-temple": {
-    quoteHe: "וְנָכוֹן יִהְיֶה הַר בֵּית־יְהֹוָה בְּרֹאשׁ הֶהָרִים",
+    quoteHe: "וְנָכוֹן  יִהְיֶה הַר בֵּית־יְהֹוָה בְּרֹאשׁ הֶהָרִים",
     quoteEn:
       "And the mountain of the LORD's house shall be established as the highest of the mountains",
     sourceHe: "יְשַׁעְיָהוּ ב׳:ב׳",

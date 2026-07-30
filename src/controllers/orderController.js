@@ -8,10 +8,9 @@ import {
   createManualDocument,
 } from "../utils/payPlusAPI.js";
 import {
-  sendBusinessOwnerOrderNotification,
-  sendCustomerOrderInvoice,
   sendOrderStatusUpdate,
   sendOrderTrackingUpdate,
+  ensureOrderEmailsSent,
 } from "../utils/emailService.js";
 import PendingOrderMongo from "../models/PendingOrderMongo.js";
 import {
@@ -574,11 +573,17 @@ export const verifyTransaction = async (req, res) => {
       });
     }
 
-    // Idempotency — avoid saving the same transaction twice
+    // Idempotency — avoid saving the same transaction twice (still ensure emails)
     const existing = await OrderMongo.findOne({
       transactionUid: paymentPageRequestUid,
     });
     if (existing) {
+      ensureOrderEmailsSent(existing).catch((err) =>
+        console.error(
+          "❌ Order email error (verifyTransaction existing):",
+          err.message,
+        ),
+      );
       return res.json({
         success: true,
         data: existing,
@@ -810,78 +815,17 @@ export const verifyTransaction = async (req, res) => {
       `✅ Transaction verified & order saved — id: ${newOrder._id}, orderId: ${publicOrderId}, uid: ${paymentPageRequestUid}`,
     );
 
-    const emailPayload = {
-      orderNumber: publicOrderId,
-      items: items.map((i) => ({
-        productId: i.productId || "",
-        name: i.name,
-        price: i.price,
-        quantity: i.quantity ?? 1,
-        selectedOptions: i.selectedOptions || {},
-      })),
-      shippingAddress: {
-        name: newOrder.shippingAddress?.fullName || customerName,
-        phone: customerPhone,
-        street: newOrder.shippingAddress?.address || "",
-        city: newOrder.shippingAddress?.city || "",
-        zipCode: newOrder.shippingAddress?.zipCode || "",
-        country: "ישראל",
-      },
-      itemsPrice: newOrder.itemsPrice,
-      taxPrice: 0,
-      shippingPrice: newOrder.shippingPrice,
-      totalPrice,
-      paymentInfo: {
-        method: "credit_card",
-        transactionId: paymentPageRequestUid,
-      },
-      createdAt: newOrder.createdAt,
-      userId: req.user?.id || null,
+    // Customer thank-you + admin notification (idempotent across webhook race)
+    ensureOrderEmailsSent(newOrder, {
       customerEmail,
-    };
-
-    // Customer thank-you + admin notification (non-blocking)
-    Promise.all([
-      customerEmail
-        ? sendCustomerOrderInvoice(customerEmail, emailPayload)
-        : Promise.resolve(),
-      sendBusinessOwnerOrderNotification(emailPayload),
-    ])
-      .then(([customerResult, adminResult]) => {
-        // #region agent log
-        fetch(
-          "http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Debug-Session-Id": "390f6a",
-            },
-            body: JSON.stringify({
-              sessionId: "390f6a",
-              runId: "run1",
-              hypothesisId: "H2,H3,H4",
-              location: "orderController.js:verifyTransaction:email-results",
-              message: "verifyTransaction email send results",
-              data: {
-                customerEmail: customerEmail || "(empty)",
-                customerResult: customerResult ?? "(skipped - no email)",
-                adminResult,
-                adminTo:
-                  process.env.ADMIN_EMAIL || process.env.EMAIL_USER || null,
-              },
-              timestamp: Date.now(),
-            }),
-          },
-        ).catch(() => {});
-        // #endregion
-      })
-      .catch((err) =>
-        console.error(
-          "❌ Order email error (verifyTransaction):",
-          err.message,
-        ),
-      );
+      customerPhone,
+      customerName,
+    }).catch((err) =>
+      console.error(
+        "❌ Order email error (verifyTransaction):",
+        err.message,
+      ),
+    );
 
     return res.status(200).json({
       success: true,
