@@ -3,6 +3,12 @@ import User from "../models/User.js";
 
 // Protect routes - verify JWT token
 export const protect = async (req, res, next) => {
+  // The CMS routers all mount on /api/admin and each guards itself, so a
+  // request that falls through one to reach another would otherwise be looked
+  // up in the database once per router. req.user is only ever set here or in
+  // optionalProtect, never from client input, so trusting it is safe.
+  if (req.user) return next();
+
   let token;
 
   // Check for token in header
@@ -54,6 +60,26 @@ export const admin = (req, res, next) => {
     });
   }
 };
+
+/**
+ * Role gate factory. `admin` above stays as-is so no existing route changes
+ * behaviour; new routes use this to be explicit about who they let through
+ * (e.g. authorize("roi") for destructive, superadmin-only actions).
+ *
+ * Must run after `protect`.
+ */
+export const authorize =
+  (...roles) =>
+  (req, res, next) => {
+    if (req.user && roles.includes(req.user.role)) {
+      return next();
+    }
+
+    return res.status(403).json({
+      success: false,
+      message: "גישה נדחתה - אין לך הרשאה לפעולה זו",
+    });
+  };
 
 // Optional protect - allows both authenticated users and guests
 export const optionalProtect = async (req, res, next) => {

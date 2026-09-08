@@ -20,6 +20,12 @@ import couponRoutes from "./routes/couponRoutes.js";
 import newsletterRoutes from "./routes/newsletterRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
+import campaignRoutes from "./routes/campaignRoutes.js";
+import dppRoutes from "./routes/dppRoutes.js";
+import popupRoutes from "./routes/popupRoutes.js";
+import adminProductPageRoutes from "./routes/adminProductPageRoutes.js";
+import adminPopupRoutes from "./routes/adminPopupRoutes.js";
+import adminLayoutRoutes from "./routes/adminLayoutRoutes.js";
 import Device from "./models/Device.js";
 
 // Load env vars
@@ -67,16 +73,38 @@ app.use(
       }
     },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // הגדרת מתודות מורשות
+    // PATCH is used for partial saves: draft blocks, popup status, dashboard
+    // layout and the newsletter subscriber toggle. Omitting it here fails the
+    // preflight, so those requests never reach the routes at all.
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"], // הגדרת כותרות מורשות
   }),
 );
+
+// Campaign traffic reaches these endpoints through the Netlify edge function,
+// so thousands of ad clicks arrive from a handful of edge node IPs. Under the
+// general limiter below a successful campaign would throttle itself within
+// seconds, so the public DPP surface gets its own, far more generous budget.
+const CAMPAIGN_PATH_PREFIXES = ["/dpp", "/popups", "/campaign"];
+
+const campaignLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3000,
+  message: "יותר מדי בקשות, נסה שוב מאוחר יותר",
+});
+
+app.use("/api/dpp", campaignLimiter);
+app.use("/api/popups", campaignLimiter);
+app.use("/api/campaign", campaignLimiter);
 
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 100, // limit each IP to 100 requests per windowMs
   message: "יותר מדי בקשות מכתובת IP זו, נסה שוב מאוחר יותר",
+  // req.path is relative to the "/api" mount point.
+  skip: (req) =>
+    CAMPAIGN_PATH_PREFIXES.some((prefix) => req.path.startsWith(prefix)),
 });
 
 app.use("/api", limiter);
@@ -114,25 +142,7 @@ app.use(express.urlencoded({ extended: true }));
 // Normalize double-slash paths (PayPlus webhook URL had //api/... when BACKEND_URL ended with /)
 app.use((req, res, next) => {
   if (req.url.includes("//")) {
-    const normalized = req.url.replace(/\/{2,}/g, "/");
-    // #region agent log
-    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "439f43",
-      },
-      body: JSON.stringify({
-        sessionId: "439f43",
-        hypothesisId: "A",
-        location: "server.js:path-normalize",
-        message: "Normalized double-slash request path",
-        data: { from: req.url, to: normalized },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    req.url = normalized;
+    req.url = req.url.replace(/\/{2,}/g, "/");
   }
   next();
 });
@@ -154,6 +164,16 @@ app.use("/api/coupons", couponRoutes);
 app.use("/api/newsletter", newsletterRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/categories", categoryRoutes);
+app.use("/api/campaign", campaignRoutes);
+
+// Dedicated Product Pages: public read path + popup runtime
+app.use("/api/dpp", dppRoutes);
+app.use("/api/popups", popupRoutes);
+
+// Marketing CMS (all mounted under /api/admin alongside adminRoutes)
+app.use("/api/admin", adminProductPageRoutes);
+app.use("/api/admin", adminPopupRoutes);
+app.use("/api/admin", adminLayoutRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

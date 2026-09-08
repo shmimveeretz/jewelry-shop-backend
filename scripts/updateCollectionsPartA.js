@@ -50,7 +50,7 @@ const SYMBOL_QUOTES = {
     sourceEn: "Psalms 150:3",
   },
   "third-temple": {
-    quoteHe: "וְנָכוֹן  יִהְיֶה הַר בֵּית־יְהֹוָה בְּרֹאשׁ הֶהָרִים",
+    quoteHe: "וְנָכוֹן־יִהְיֶה הַר בֵּית־יְהֹוָה בְּרֹאשׁ הֶהָרִים",
     quoteEn:
       "And the mountain of the LORD's house shall be established as the highest of the mountains",
     sourceHe: "יְשַׁעְיָהוּ ב׳:ב׳",
@@ -80,7 +80,9 @@ for (const product of products) {
 }
 
 fs.writeFileSync(productsPath, JSON.stringify(products, null, 2) + "\n");
-console.log(`✅ Updated ${jsonProductUpdates} products in Products.products.json`);
+console.log(
+  `✅ Updated ${jsonProductUpdates} products in Products.products.json`,
+);
 
 async function syncMongo() {
   const uri = process.env.MONGODB_URI;
@@ -103,7 +105,9 @@ async function syncMongo() {
       },
     },
   );
-  console.log(`✅ Renamed ${shilatResult.modifiedCount} שילת → סמלי בני ישראל products`);
+  console.log(
+    `✅ Renamed ${shilatResult.modifiedCount} שילת → סמלי בני ישראל products`,
+  );
 
   for (const [id, quotes] of Object.entries(SYMBOL_QUOTES)) {
     const result = await ProductMongo.updateOne(
@@ -119,7 +123,13 @@ async function syncMongo() {
   for (const [id, quotes] of Object.entries(SYMBOL_QUOTES)) {
     await ProductMongo.updateOne(
       { id, category: "סמלי בני ישראל" },
-      { $set: { ...quotes, categoryEn: "Symbols of Israel", updatedAt: new Date() } },
+      {
+        $set: {
+          ...quotes,
+          categoryEn: "Symbols of Israel",
+          updatedAt: new Date(),
+        },
+      },
     );
   }
 
