@@ -3,8 +3,6 @@ export const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
 
-  // Log error for debugging
-  console.error("Error:", err);
 
   // Mongoose bad ObjectId
   if (err.name === "CastError") {
@@ -38,9 +36,17 @@ export const errorHandler = (err, req, res, next) => {
     error = { statusCode: 401, message };
   }
 
-  res.status(error.statusCode || 500).json({
+  const status = error.statusCode || 500;
+
+  // 404s and validation errors are routine; only unexpected failures need a trace
+  if (status >= 500) {
+    console.error("Error:", err);
+  }
+
+  res.status(status).json({
     success: false,
-    message: error.message || "שגיאת שרת",
+    // Internal error text (driver messages, file paths) stays in the logs
+    message: status >= 500 ? "שגיאת שרת" : error.message || "שגיאת שרת",
     ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 };

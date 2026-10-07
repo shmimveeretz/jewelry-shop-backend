@@ -27,19 +27,34 @@ export const protect = async (req, res, next) => {
   }
 
   try {
-    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Get user from token (Firebase doesn't need .select, it just doesn't return password)
-    req.user = await User.findById(decoded.id);
+    // Password-reset tokens carry a purpose claim and are not login sessions.
+    if (decoded.purpose) {
+      return res.status(401).json({
+        success: false,
+        message: "לא מורשה - טוקן לא תקין",
+      });
+    }
 
-    if (!req.user) {
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
       return res.status(401).json({
         success: false,
         message: "משתמש לא נמצא",
       });
     }
 
+    // Blocking an account must also end sessions that are already open.
+    if (user.blocked) {
+      return res.status(403).json({
+        success: false,
+        message: "חשבון זה נחסם. אנא פנה לתמיכה",
+      });
+    }
+
+    req.user = user;
     next();
   } catch (error) {
     return res.status(401).json({
@@ -97,19 +112,13 @@ export const optionalProtect = async (req, res, next) => {
   if (token && token !== "null" && token !== "undefined") {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = await User.findById(decoded.id);
-
-      if (!req.user) {
-        console.log("⚠️ משתמש לא נמצא, ממשיך כאורח");
-      } else {
-        console.log(`✅ משתמש מאומת: ${req.user.email}`);
+      if (!decoded.purpose) {
+        const user = await User.findById(decoded.id);
+        if (user && !user.blocked) req.user = user;
       }
-    } catch (error) {
-      // Invalid token, but we allow guests, so continue
-      console.log("⚠️ טוקן לא תקין, ממשיך כאורח");
+    } catch {
+      // Invalid token, but guests are allowed, so continue without a user
     }
-  } else {
-    console.log("ℹ️ אין טוקן - ממשיך כאורח");
   }
 
   // Continue regardless of authentication status

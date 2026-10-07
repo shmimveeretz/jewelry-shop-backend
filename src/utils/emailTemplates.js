@@ -2,6 +2,33 @@
  * Shared branded email layout for שמים וארץ automated emails.
  */
 
+const HTML_ESCAPES = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+/** Escape a value for safe insertion into email HTML. */
+export const escapeHtml = (value) =>
+  String(value ?? "").replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch]);
+
+/**
+ * Copy of `value` with every string HTML-escaped. Arrays and plain objects are
+ * walked; numbers, Dates, ObjectIds and other instances are kept as they are.
+ */
+export const escapeDeep = (value) => {
+  if (typeof value === "string") return escapeHtml(value);
+  if (Array.isArray(value)) return value.map(escapeDeep);
+  if (value && Object.getPrototypeOf(value) === Object.prototype) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, inner]) => [key, escapeDeep(inner)]),
+    );
+  }
+  return value;
+};
+
 export const getFrontendUrl = (path = "") => {
   const base = (
     process.env.FRONTEND_URL || "https://shamaimveeretz.com"

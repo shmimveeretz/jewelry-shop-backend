@@ -1,9 +1,21 @@
 import sgMail from "@sendgrid/mail";
 import dotenv from "dotenv";
-// #region agent log
-import { dbg } from "./debugLog.js";
-// #endregion
 import OrderMongo from "../models/OrderMongo.js";
+import { escapeDeep } from "./emailTemplates.js";
+import { buildUnsubscribeUrl } from "./unsubscribe.js";
+
+/** "ישראל", "גרמניה"… from an ISO country code (orders default to Israel). */
+const countryName = (code) => {
+  try {
+    return new Intl.DisplayNames(["he"], { type: "region" }).of(code || "IL") || "ישראל";
+  } catch {
+    return "ישראל";
+  }
+};
+
+/** "₪1,295" — same formatting customers see on the site. */
+const ils = (amount) =>
+  "₪" + Number(amount || 0).toLocaleString("he-IL", { maximumFractionDigits: 2 });
 dotenv.config();
 
 // Set SendGrid API key
@@ -194,21 +206,10 @@ export const sendEmail = async (mailOptions) => {
     if (mailOptions.replyTo) {
       msg.replyTo = mailOptions.replyTo;
     }
+    if (mailOptions.headers) {
+      msg.headers = mailOptions.headers;
+    }
     const result = await sgMail.send(msg);
-    // #region agent log
-    dbg({
-      runId: "run2",
-      hypothesisId: "H4",
-      location: "emailService.js:sendEmail:success",
-      message: "SendGrid accepted email",
-      data: {
-        to: msg.to,
-        from: msg.from,
-        subject: msg.subject,
-        sgStatusCode: result[0]?.statusCode ?? null,
-      },
-    });
-    // #endregion
     return {
       success: true,
       message: "Email sent successfully",
@@ -216,22 +217,6 @@ export const sendEmail = async (mailOptions) => {
     };
   } catch (error) {
     console.error("Email Service Error:", error.message);
-    // #region agent log
-    dbg({
-      runId: "run2",
-      hypothesisId: "H4",
-      location: "emailService.js:sendEmail:error",
-      message: "SendGrid send failed (swallowed)",
-      data: {
-        to: mailOptions.to,
-        from: process.env.EMAIL_USER || "noreply@shamaimveeretz.com",
-        subject: mailOptions.subject,
-        errorMessage: error.message,
-        sgErrors: error.response?.body?.errors ?? null,
-        sgStatusCode: error.code ?? error.response?.statusCode ?? null,
-      },
-    });
-    // #endregion
     return { success: false, message: error.message };
   }
 };
@@ -255,18 +240,6 @@ export const ensureOrderEmailsSent = async (order, overrides = {}) => {
   );
 
   if (!claimed) {
-    // #region agent log
-    dbg({
-      runId: "post-fix",
-      hypothesisId: "H2",
-      location: "emailService.js:ensureOrderEmailsSent:skipped",
-      message: "Order emails already claimed/sent",
-      data: {
-        orderId: order.orderId ?? null,
-        mongoId: String(order._id),
-      },
-    });
-    // #endregion
     return { skipped: true, reason: "already-sent" };
   }
 
@@ -296,7 +269,7 @@ export const ensureOrderEmailsSent = async (order, overrides = {}) => {
       street: order.shippingAddress?.address || "",
       city: order.shippingAddress?.city || "",
       zipCode: order.shippingAddress?.zipCode || "",
-      country: "ישראל",
+      country: countryName(order.shippingAddress?.country),
     },
     itemsPrice: order.itemsPrice,
     taxPrice: 0,
@@ -329,20 +302,6 @@ export const ensureOrderEmailsSent = async (order, overrides = {}) => {
       );
     }
 
-    // #region agent log
-    dbg({
-      runId: "post-fix",
-      hypothesisId: "H2,H3,H4",
-      location: "emailService.js:ensureOrderEmailsSent:sent",
-      message: "Order emails send attempt finished",
-      data: {
-        orderId: publicOrderId,
-        customerEmail: customerEmail || "(empty)",
-        customerResult: customerResult ?? "(skipped - no email)",
-        adminResult,
-      },
-    });
-    // #endregion
 
     return { skipped: false, customerResult, adminResult };
   } catch (error) {
@@ -360,6 +319,8 @@ export const ensureOrderEmailsSent = async (order, overrides = {}) => {
  */
 
 export const sendOrderConfirmation = async (to, orderData) => {
+  // Customer-typed values end up in HTML; escape them so they render as text.
+  orderData = escapeDeep(orderData);
   const { orderId, items, totalPrice, customerName } = orderData;
   const itemsList = items
     .map(
@@ -367,7 +328,7 @@ export const sendOrderConfirmation = async (to, orderData) => {
     <tr>
       <td>${item.name}</td>
       <td style="text-align:center;">${item.quantity}</td>
-      <td style="text-align:left;">₪${item.price}</td>
+      <td style="text-align:left;">${ils(item.price)}</td>
     </tr>
   `,
     )
@@ -388,7 +349,7 @@ export const sendOrderConfirmation = async (to, orderData) => {
       <tfoot>
         <tr>
           <td colspan="2" style="padding-top:24px; font-weight:600; border:none;">סה"כ לתשלום</td>
-          <td style="padding-top:24px; font-weight:700; text-align:left; font-size:18px; border:none; color:#934b19;">₪${totalPrice}</td>
+          <td style="padding-top:24px; font-weight:700; text-align:left; font-size:18px; border:none; color:#934b19;">${ils(totalPrice)}</td>
         </tr>
       </tfoot>
     </table>
@@ -409,6 +370,8 @@ export const sendOrderConfirmation = async (to, orderData) => {
  * orderData: { orderNumber, items, shippingAddress, itemsPrice, shippingPrice, totalPrice, paymentInfo, createdAt }
  */
 export const sendCustomerOrderInvoice = async (to, orderData) => {
+  // Customer-typed values end up in HTML; escape them so they render as text.
+  orderData = escapeDeep(orderData);
   const {
     orderNumber,
     items = [],
@@ -428,7 +391,7 @@ export const sendCustomerOrderInvoice = async (to, orderData) => {
     <tr>
       <td>${item.name}</td>
       <td style="text-align:center;">${item.quantity ?? 1}</td>
-      <td style="text-align:left;">₪${item.price}</td>
+      <td style="text-align:left;">${ils(item.price)}</td>
     </tr>
   `,
     )
@@ -439,6 +402,7 @@ export const sendCustomerOrderInvoice = async (to, orderData) => {
     shippingAddress.street,
     shippingAddress.city,
     shippingAddress.zipCode,
+    shippingAddress.country,
   ]
     .filter(Boolean)
     .join(", ");
@@ -447,7 +411,7 @@ export const sendCustomerOrderInvoice = async (to, orderData) => {
     <h2 class="h2">תודה על ההזמנה!</h2>
     <p class="p">הזמנתך התקבלה בהצלחה ומעובדת כעת בגלריה שלנו. שמור את מספר המעקב לבדיקת סטטוס ההזמנה בכל עת.</p>
     <div class="code-box">
-      <p style="font-size:10px; font-weight:600; color:#934b19; letter-spacing:3px; text-transform:uppercase; margin:0 0 24px;">מספר מעקב</p>
+      <p style="font-size:10px; font-weight:600; color:#934b19; letter-spacing:3px; text-transform:uppercase; margin:0 0 24px;">מספר הזמנה</p>
       <span class="code-text" style="font-size:20px; letter-spacing:2px;">${orderNumber}</span>
     </div>
     <table class="table-receipt">
@@ -464,13 +428,13 @@ export const sendCustomerOrderInvoice = async (to, orderData) => {
           shippingPrice != null
             ? `<tr>
           <td colspan="2" style="border:none; padding-top:16px;">משלוח</td>
-          <td style="border:none; padding-top:16px; text-align:left;">₪${shippingPrice}</td>
+          <td style="border:none; padding-top:16px; text-align:left;">${Number(shippingPrice) > 0 ? ils(shippingPrice) : "חינם"}</td>
         </tr>`
             : ""
         }
         <tr>
           <td colspan="2" style="padding-top:24px; font-weight:600; border:none;">סה"כ שולם</td>
-          <td style="padding-top:24px; font-weight:700; text-align:left; font-size:18px; border:none; color:#934b19;">₪${totalPrice}</td>
+          <td style="padding-top:24px; font-weight:700; text-align:left; font-size:18px; border:none; color:#934b19;">${ils(totalPrice)}</td>
         </tr>
       </tfoot>
     </table>
@@ -482,7 +446,7 @@ export const sendCustomerOrderInvoice = async (to, orderData) => {
     </div>`
         : ""
     }
-    <p class="p" style="margin-bottom:0;">משלוח סטנדרטי לוקח 3-5 ימי עסקים. נעדכן אותך בכל שלב.</p>
+    <p class="p" style="margin-bottom:0;">כל תכשיט נעשה בעבודת יד במיוחד עבורך ונשלח תוך עד 14 ימי עסקים. נעדכן אותך במייל עם מספר המעקב ברגע שההזמנה יוצאת לדרך.</p>
     <div style="text-align:center;">
       <a href="${trackUrl}" class="btn">מעקב אחר ההזמנה</a>
     </div>
@@ -490,7 +454,7 @@ export const sendCustomerOrderInvoice = async (to, orderData) => {
 
   return await sendEmail({
     to,
-    subject: `תודה על ההזמנה! מספר מעקב #${orderNumber} - שמים וארץ`,
+    subject: `תודה על ההזמנה! הזמנה #${orderNumber} - שמים וארץ`,
     html: generateEmailTemplate(contentHtml, "אישור הזמנה"),
   });
 };
@@ -499,6 +463,8 @@ export const sendCustomerOrderInvoice = async (to, orderData) => {
  * New-order notification to the business owner / admin
  */
 export const sendBusinessOwnerOrderNotification = async (orderData) => {
+  // Customer-typed values end up in HTML; escape them so they render as text.
+  orderData = escapeDeep(orderData);
   const {
     orderNumber,
     items = [],
@@ -515,7 +481,7 @@ export const sendBusinessOwnerOrderNotification = async (orderData) => {
     <tr>
       <td>${item.name}</td>
       <td style="text-align:center;">${item.quantity ?? 1}</td>
-      <td style="text-align:left;">₪${item.price}</td>
+      <td style="text-align:left;">${ils(item.price)}</td>
     </tr>
   `,
     )
@@ -548,7 +514,7 @@ export const sendBusinessOwnerOrderNotification = async (orderData) => {
       <tfoot>
         <tr>
           <td colspan="2" style="padding-top:24px; font-weight:600; border:none;">סה"כ</td>
-          <td style="padding-top:24px; font-weight:700; text-align:left; font-size:18px; border:none; color:#934b19;">₪${totalPrice}</td>
+          <td style="padding-top:24px; font-weight:700; text-align:left; font-size:18px; border:none; color:#934b19;">${ils(totalPrice)}</td>
         </tr>
       </tfoot>
     </table>
@@ -556,12 +522,14 @@ export const sendBusinessOwnerOrderNotification = async (orderData) => {
 
   return await sendEmail({
     to: process.env.ADMIN_EMAIL || process.env.EMAIL_USER,
-    subject: `הזמנה חדשה #${orderNumber} - ₪${totalPrice}`,
+    subject: `הזמנה חדשה #${orderNumber} - ${ils(totalPrice)}`,
     html: generateEmailTemplate(contentHtml, "הזמנה חדשה"),
   });
 };
 
 export const sendOrderStatusUpdate = async (to, statusData) => {
+  // Customer-typed values end up in HTML; escape them so they render as text.
+  statusData = escapeDeep(statusData);
   const { orderId, status, customerName, trackingNumber } = statusData;
   const statusMessages = {
     // DB enum statuses (English)
@@ -608,6 +576,8 @@ export const sendOrderStatusUpdate = async (to, statusData) => {
  * Gives the customer the tracking number + a one-click order tracking button.
  */
 export const sendOrderTrackingUpdate = async (to, trackingData) => {
+  // Customer-typed values end up in HTML; escape them so they render as text.
+  trackingData = escapeDeep(trackingData);
   const { orderId, customerName, trackingNumber } = trackingData;
 
   const contentHtml = `
@@ -626,12 +596,14 @@ export const sendOrderTrackingUpdate = async (to, trackingData) => {
 
   return await sendEmail({
     to,
-    subject: `ההזמנה שלך נשלחה - מספר מעקב #${orderId} - שמים וארץ`,
+    subject: `ההזמנה שלך יצאה לדרך! הזמנה #${orderId} - שמים וארץ`,
     html: generateEmailTemplate(contentHtml, "מספר מעקב למשלוח"),
   });
 };
 
 export const sendPasswordResetEmail = async (to, resetData) => {
+  // Customer-typed values end up in HTML; escape them so they render as text.
+  resetData = escapeDeep(resetData);
   const { name, verificationCode } = resetData;
   const contentHtml = `
     <h2 class="h2">איפוס סיסמה</h2>
@@ -651,7 +623,24 @@ export const sendPasswordResetEmail = async (to, resetData) => {
   });
 };
 
+/**
+ * Footer line + headers that let a newsletter recipient opt out in one click.
+ * Every marketing email must carry these (anti-spam law §30A).
+ */
+export const buildUnsubscribeParts = (email) => {
+  const url = buildUnsubscribeUrl(email);
+  return {
+    html: `
+    <p style="font-family:'Manrope',Arial,sans-serif;font-size:11px;color:#7f7663;text-align:center;margin:24px 0 0;">
+      קיבלת מייל זה כי נרשמת לדיוור של שמים וארץ.
+      <a href="${url}" style="color:#7f7663;text-decoration:underline;">להסרה מרשימת התפוצה</a>
+    </p>`,
+    headers: { "List-Unsubscribe": `<${url}>` },
+  };
+};
+
 export const sendNewsletterWelcomeEmail = async (to, couponCode) => {
+  const unsubscribe = buildUnsubscribeParts(to);
   const contentHtml = `
     <h2 class="h2">ברוכים הבאים לגלריה</h2>
     <p class="p">תודה שהצטרפת לקהילת שמים וארץ. אנו נרגשים לשתף איתך יצירות חדשות וסיפורים מאחורי הקלעים.</p>
@@ -664,16 +653,20 @@ export const sendNewsletterWelcomeEmail = async (to, couponCode) => {
     <div style="text-align:center;">
       <a href="${process.env.FRONTEND_URL}/shop" class="btn">גלה את הקולקציה</a>
     </div>
+    ${unsubscribe.html}
   `;
 
   return await sendEmail({
     to,
     subject: "ברוכים הבאים לשמים וארץ",
     html: generateEmailTemplate(contentHtml, "ברוכים הבאים"),
+    headers: unsubscribe.headers,
   });
 };
 
 export const sendWelcomeEmail = async (to, userData) => {
+  // Customer-typed values end up in HTML; escape them so they render as text.
+  userData = escapeDeep(userData);
   const { name } = userData;
   const contentHtml = `
     <h2 class="h2">ברוכים הבאים למשפחה</h2>
@@ -699,6 +692,8 @@ export const sendWelcomeEmail = async (to, userData) => {
 };
 
 export const sendContactEmail = async (contactData) => {
+  // Customer-typed values end up in HTML; escape them so they render as text.
+  contactData = escapeDeep(contactData);
   const { name, email, phone, message } = contactData;
   const contentHtml = `
     <h2 class="h2">פנייה חדשה מהאתר</h2>
@@ -722,6 +717,8 @@ export const sendContactEmail = async (contactData) => {
 };
 
 export const sendNewUserNotificationToAdmin = async (userData) => {
+  // Customer-typed values end up in HTML; escape them so they render as text.
+  userData = escapeDeep(userData);
   const { name, email, phone } = userData;
   const contentHtml = `
     <h2 class="h2">רישום משתמש חדש</h2>

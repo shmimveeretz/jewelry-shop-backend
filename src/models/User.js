@@ -1,5 +1,21 @@
 import UserMongo from "./UserMongo.js";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
+
+const BCRYPT_HASH_RE = /^\$2[aby]\$\d{2}\$/;
+const PASSWORD_FORMAT_ERROR =
+  "הסיסמה חייבת להכיל לפחות 8 תווים, אות גדולה, אות קטנה וסימן מיוחד";
+
+/**
+ * Before this fix, password resets saved the new password unhashed. Those
+ * accounts still log in: the plain value is compared in constant time and the
+ * caller re-hashes it on success (see login).
+ */
+const comparePlainLegacy = (entered, stored) => {
+  const a = Buffer.from(String(entered));
+  const b = Buffer.from(String(stored));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+};
 
 // Validate password format
 const validatePasswordFormat = (password) => {
@@ -19,7 +35,17 @@ class UserModel {
   }
 
   async comparePassword(enteredPassword, hashedPassword) {
+    if (typeof enteredPassword !== "string" || typeof hashedPassword !== "string") {
+      return false;
+    }
+    if (!BCRYPT_HASH_RE.test(hashedPassword)) {
+      return comparePlainLegacy(enteredPassword, hashedPassword);
+    }
     return await bcrypt.compare(enteredPassword, hashedPassword);
+  }
+
+  isHashed(storedPassword) {
+    return typeof storedPassword === "string" && BCRYPT_HASH_RE.test(storedPassword);
   }
 
   async create(userData) {
@@ -113,6 +139,7 @@ class UserModel {
         orders: user.orders,
         verificationCode: user.verificationCode,
         verificationCodeExpire: user.verificationCodeExpire,
+        verificationAttempts: user.verificationAttempts || 0,
         ...(includePassword && { password: user.password }),
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
@@ -144,6 +171,7 @@ class UserModel {
         orders: user.orders,
         verificationCode: user.verificationCode,
         verificationCodeExpire: user.verificationCodeExpire,
+        verificationAttempts: user.verificationAttempts || 0,
         ...(includePassword && { password: user.password }),
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
@@ -161,11 +189,9 @@ class UserModel {
       // Handle password separately if provided
       if (updateData.password) {
         if (!validatePasswordFormat(updateData.password)) {
-          throw new Error(
-            "הסיסמה חייבת להכיל לפחות 8 תווים, אות גדולה, אות קטנה וסימן מיוחד",
-          );
+          throw new Error(PASSWORD_FORMAT_ERROR);
         }
-        user.password = updateData.password; // Will be hashed by pre-save hook
+        user.password = await this.hashPassword(updateData.password);
         delete updateData.password;
       }
 
@@ -207,14 +233,24 @@ class UserModel {
     }
   }
 
-  async updatePassword(id, newPassword) {
+  async updatePassword(id, newPassword, { skipFormatCheck = false } = {}) {
     try {
-      const user = await this.Model.findById(id);
-      if (!user) return false;
+      if (!skipFormatCheck && !validatePasswordFormat(newPassword)) {
+        throw new Error(PASSWORD_FORMAT_ERROR);
+      }
 
-      user.password = newPassword; // Will be hashed by pre-save hook
-      await user.save();
-      return true;
+      // Direct update: there is no pre-save hook, so hash here, and skip
+      // full-document validation that older accounts may not pass.
+      const result = await this.Model.updateOne(
+        { _id: id },
+        {
+          $set: {
+            password: await this.hashPassword(newPassword),
+            updatedAt: new Date(),
+          },
+        },
+      );
+      return result.matchedCount > 0;
     } catch (error) {
       throw error;
     }
@@ -257,10 +293,6 @@ class UserModel {
         cart: user.cart,
         wishlist: user.wishlist,
         orders: user.orders,
-        verificationCode: user.verificationCode,
-        verificationCodeExpire: user.verificationCodeExpire
-          ? new Date(user.verificationCodeExpire).getTime()
-          : undefined,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       }));
@@ -269,10 +301,6 @@ class UserModel {
     }
   }
 
-  // Static method for password comparison (needed by authController)
-  static async comparePassword(enteredPassword, hashedPassword) {
-    return await bcrypt.compare(enteredPassword, hashedPassword);
-  }
 }
 
 export default new UserModel();

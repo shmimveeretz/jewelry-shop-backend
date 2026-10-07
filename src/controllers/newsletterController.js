@@ -4,7 +4,9 @@ import UserMongo from "../models/UserMongo.js";
 import {
   sendNewsletterWelcomeEmail,
   sendEmail,
+  buildUnsubscribeParts,
 } from "../utils/emailService.js";
+import { isValidUnsubscribeToken } from "../utils/unsubscribe.js";
 import { buildEmailLayout } from "../utils/emailTemplates.js";
 
 // @desc    Get all newsletter subscribers
@@ -31,18 +33,28 @@ export const getSubscribers = async (req, res) => {
 // @access  Public
 export const subscribe = async (req, res) => {
   try {
-    const { email } = req.body;
+    const email =
+      typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
 
-    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+    if (!email || email.length > 200 || !/^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(email)) {
       return res
         .status(400)
         .json({ success: false, message: "נא להזין כתובת אימייל תקינה" });
     }
 
-    const existing = await NewsletterMongo.findOne({
-      email: email.toLowerCase(),
-    });
+    const existing = await NewsletterMongo.findOne({ email });
     if (existing) {
+      // Someone who unsubscribed earlier can opt back in, but does not get a
+      // second welcome coupon.
+      if (existing.active === false) {
+        existing.active = true;
+        await existing.save();
+        return res.json({
+          success: true,
+          message: "נרשמת מחדש לניוזלטר",
+          couponCode: null,
+        });
+      }
       return res.status(400).json({
         success: false,
         message: "כתובת אימייל זו כבר רשומה לניוזלטר",
@@ -66,6 +78,8 @@ export const subscribe = async (req, res) => {
       code: couponCode,
       discountPercent: 5,
       type: "newsletter",
+      // A welcome code is a one-time gift, not a permanent discount
+      maxUses: 1,
       description: `קוד ניוזלטר עבור ${email}`,
       isActive: true,
     });
@@ -220,9 +234,19 @@ export const sendBulkEmail = async (req, res) => {
 
     const results = { sent: 0, failed: 0, errors: [] };
 
-    // Send one by one — one failure must not crash the rest
+    // Send one by one — one failure must not crash the rest. Each copy gets
+    // its own signed unsubscribe link (required for marketing email).
     for (const email of recipients) {
-      const result = await sendEmail({ to: email, subject, html: bodyContent });
+      const unsubscribe = buildUnsubscribeParts(email);
+      const html = bodyContent.includes("</body>")
+        ? bodyContent.replace("</body>", `${unsubscribe.html}</body>`)
+        : bodyContent + unsubscribe.html;
+      const result = await sendEmail({
+        to: email,
+        subject,
+        html,
+        headers: unsubscribe.headers,
+      });
       if (result.success) {
         results.sent++;
       } else {
@@ -246,5 +270,36 @@ export const sendBulkEmail = async (req, res) => {
   } catch (error) {
     console.error("❌ Send Bulk Email Error:", error.message);
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Opt out of the newsletter from the link in a marketing email
+// @route   POST /api/newsletter/unsubscribe
+// @access  Public (signed link)
+export const unsubscribe = async (req, res) => {
+  try {
+    const email =
+      typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    const { token } = req.body;
+
+    if (!email || !isValidUnsubscribeToken(email, token)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "קישור ההסרה אינו תקין" });
+    }
+
+    // Covers both lists the bulk sender reads from
+    await Promise.all([
+      NewsletterMongo.updateOne({ email }, { $set: { active: false } }),
+      UserMongo.updateOne(
+        { email },
+        { $set: { isSubscribedToNewsletter: false, updatedAt: Date.now() } },
+      ),
+    ]);
+
+    res.json({ success: true, message: "הוסרת מרשימת התפוצה" });
+  } catch (error) {
+    console.error("❌ Unsubscribe Error:", error.message);
+    res.status(500).json({ success: false, message: "שגיאת שרת" });
   }
 };

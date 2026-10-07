@@ -46,6 +46,8 @@ const OrderSchema = new mongoose.Schema(
       address: String,
       city: String,
       zipCode: String,
+      // ISO 3166-1 alpha-2; orders before international shipping are "IL"
+      country: { type: String, default: "IL" },
     },
     trackingNumber: { type: String, default: "" },
 
@@ -62,6 +64,7 @@ const OrderSchema = new mongoose.Schema(
       enum: ["pending", "completed", "failed"],
       default: "pending",
     },
+    // Unique so the webhook and browser verification cannot both save one payment
     transactionUid: { type: String },
     // Prevents duplicate thank-you / admin emails across webhook vs verifyTransaction race
     orderEmailsSent: { type: Boolean, default: false },
@@ -84,6 +87,13 @@ const OrderSchema = new mongoose.Schema(
     updatedAt: { type: Date, default: Date.now },
   },
   { collection: "orders" },
+);
+
+// Legacy orders store transactionUid as null, so only string values are
+// constrained (a sparse index would still collide on the nulls).
+OrderSchema.index(
+  { transactionUid: 1 },
+  { unique: true, partialFilterExpression: { transactionUid: { $type: "string" } } },
 );
 
 export default mongoose.model("Order", OrderSchema);

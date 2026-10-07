@@ -1,6 +1,7 @@
 import express from "express";
 import {
   subscribe,
+  unsubscribe,
   getSubscribers,
   toggleSubscription,
   toggleSubscriber,
@@ -12,6 +13,7 @@ import { protect, admin } from "../middleware/auth.js";
 const router = express.Router();
 
 router.post("/subscribe", subscribe);
+router.post("/unsubscribe", unsubscribe);
 router.get("/subscribers", protect, admin, getSubscribers);
 router.put("/toggle/:userId", protect, admin, toggleSubscription);
 router.patch("/subscribers/:id/toggle", protect, admin, toggleSubscriber);

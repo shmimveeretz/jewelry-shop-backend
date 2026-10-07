@@ -1,13 +1,37 @@
 import User from "../models/User.js";
 import Device from "../models/Device.js";
 import { generateToken } from "../middleware/auth.js";
-import speakeasy from "speakeasy";
+import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import { getClientIP } from "../utils/clientIp.js";
+
 import {
   sendWelcomeEmail,
   sendNewUserNotificationToAdmin,
   sendPasswordResetEmail,
 } from "../utils/emailService.js";
+
+const RESET_CODE_TTL_MS = 10 * 60 * 1000;
+const MAX_CODE_ATTEMPTS = 5;
+const STAFF_ROLES = ["admin", "roi"];
+
+/**
+ * Who may change another account. Only the superadmin ("roi") can grant or
+ * revoke staff roles or act on another staff account, and nobody can demote,
+ * block or delete themselves (which could lock the shop out of its own panel).
+ * Returns an error message, or null when allowed.
+ */
+const checkUserManagement = (actor, target, nextRole) => {
+  if (String(actor.id) === String(target.id)) {
+    return "לא ניתן לבצע פעולה זו על החשבון שלך";
+  }
+  const touchesStaff =
+    STAFF_ROLES.includes(target.role) || (nextRole && STAFF_ROLES.includes(nextRole));
+  if (touchesStaff && actor.role !== "roi") {
+    return "רק מנהל-על יכול לשנות חשבונות מנהלים";
+  }
+  return null;
+};
 
 // Helper function to extract device info from User-Agent
 const getDeviceInfo = (userAgent) => {
@@ -31,7 +55,10 @@ export const register = async (req, res) => {
   try {
     const firstName = req.body.firstName || req.body.firstname;
     const lastName = req.body.lastName || req.body.lastname;
-    const { email, password, phone, isSubscribedToNewsletter } = req.body;
+    const { email, password, phone } = req.body;
+    // The signup form sends `newsletterSubscribe`; older clients sent the model name.
+    const isSubscribedToNewsletter =
+      req.body.newsletterSubscribe ?? req.body.isSubscribedToNewsletter;
 
     // Validate required fields
     if (!firstName || !lastName || !email || !password || !phone) {
@@ -143,6 +170,11 @@ export const login = async (req, res) => {
       });
     }
 
+    // Accounts reset before hashing was fixed hold a plain password; upgrade it.
+    if (!User.isHashed(user.password)) {
+      await User.updatePassword(user.id, password, { skipFormatCheck: true });
+    }
+
     // Get client IP and device info
     const clientIP = getClientIP(req);
     const userAgent = req.headers["user-agent"] || "Unknown";
@@ -237,9 +269,10 @@ export const getMe = async (req, res) => {
       });
     }
 
+    const { verificationCode, verificationCodeExpire, verificationAttempts, ...safeUser } = user;
     res.json({
       success: true,
-      data: user,
+      data: safeUser,
     });
   } catch (error) {
     res.status(500).json({
@@ -280,6 +313,13 @@ export const updateProfile = async (req, res) => {
 // @access  Private
 export const updatePassword = async (req, res) => {
   try {
+    if (!req.body.currentPassword || !req.body.newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "נא להזין סיסמה נוכחית וסיסמה חדשה",
+      });
+    }
+
     const user = await User.findById(req.user.id, true);
 
     if (!user) {
@@ -312,50 +352,50 @@ export const updatePassword = async (req, res) => {
       token,
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(error.message?.includes("הסיסמה") ? 400 : 500).json({
       success: false,
       message: error.message,
     });
   }
 };
 
-// @desc    Forgot password - send reset code with Magic Link + TOTP
+// @desc    Forgot password - email a one-time reset code
 // @route   POST /api/auth/forgotpassword
 // @access  Public
 export const forgotPassword = async (req, res) => {
+  // Same answer whether or not the address is registered, so the endpoint
+  // cannot be used to discover which emails have accounts.
+  const genericResponse = {
+    success: true,
+    message: "אם הכתובת רשומה במערכת, נשלח אליה קוד אימות",
+  };
+
   try {
-    const { email } = req.body;
+    const email = typeof req.body.email === "string" ? req.body.email.trim() : "";
     if (!email)
       return res
         .status(400)
         .json({ success: false, message: "נא להזין כתובת אימייל" });
 
     const user = await User.findByEmail(email);
-    if (!user)
-      return res
-        .status(404)
-        .json({ success: false, message: "לא נמצא משתמש עם כתובת אימייל זו" });
+    if (!user || user.blocked) return res.json(genericResponse);
 
-    const secret = speakeasy.generateSecret({ length: 32 });
-    const verificationCode = speakeasy.totp({
-      secret: secret.base32,
-      encoding: "base32",
-      time: 300,
+    const verificationCode = crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
+    const verificationCodeExpire = new Date(Date.now() + RESET_CODE_TTL_MS);
+
+    await User.update(user.id, {
+      verificationCode,
+      verificationCodeExpire,
+      verificationAttempts: 0,
     });
-    const verificationCodeExpire = new Date(Date.now() + 10 * 60 * 1000);
 
-    await User.update(user.id, { verificationCode, verificationCodeExpire });
+    const emailResult = await sendPasswordResetEmail(user.email, {
+      name: `${user.firstName} ${user.lastName}`,
+      verificationCode,
+    });
 
-    try {
-      const emailResult = await sendPasswordResetEmail(email, {
-        name: `${user.firstName} ${user.lastName}`,
-        verificationCode,
-      });
-      if (!emailResult.success) throw new Error(emailResult.message);
-
-      res.json({ success: true, message: "נשלח קוד אימות לאימייל" });
-    } catch (error) {
-      console.error("❌ Reset email error:", error.message);
+    if (!emailResult.success) {
+      console.error("❌ Reset email error:", emailResult.message);
       await User.update(user.id, {
         verificationCode: null,
         verificationCodeExpire: null,
@@ -364,22 +404,34 @@ export const forgotPassword = async (req, res) => {
         .status(500)
         .json({ success: false, message: "שגיאה בשליחת האימייל" });
     }
+
+    res.json(genericResponse);
   } catch (error) {
     console.error("❌ Forgot Password Error:", error.message);
-    console.error("Full error:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(500).json({ success: false, message: "שגיאת שרת" });
   }
 };
 
-// @desc    Verify TOTP code
+const INVALID_CODE = { success: false, message: "קוד לא תקף או פג תוקף" };
+
+/** Constant-time string comparison for reset codes. */
+const codesMatch = (a, b) => {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB);
+};
+
+// @desc    Verify the emailed reset code
 // @route   POST /api/auth/verifycode
 // @access  Public
+//
+// Returns a short-lived token that is only good for changePassword. It is not
+// a login token: `protect` rejects anything carrying a `purpose` claim.
 export const verifyCode = async (req, res) => {
   try {
-    const { email, code } = req.body;
+    const email = typeof req.body.email === "string" ? req.body.email.trim() : "";
+    const code = typeof req.body.code === "string" ? req.body.code.trim() : String(req.body.code ?? "");
 
     if (!email || !code)
       return res
@@ -387,19 +439,29 @@ export const verifyCode = async (req, res) => {
         .json({ success: false, message: "נא להזין אימייל וקוד אימות" });
 
     const user = await User.findByEmail(email);
-    if (!user)
-      return res.status(404).json({ success: false, message: "משתמש לא נמצא" });
+    if (!user?.verificationCode) return res.status(400).json(INVALID_CODE);
 
-    if (
-      user.verificationCode !== code ||
-      user.verificationCodeExpire < Date.now()
-    ) {
-      return res
-        .status(400)
-        .json({ success: false, message: "קוד לא תקף או פג תוקף" });
+    const expired =
+      !user.verificationCodeExpire ||
+      new Date(user.verificationCodeExpire).getTime() < Date.now();
+    const attempts = Number(user.verificationAttempts) || 0;
+
+    if (expired || attempts >= MAX_CODE_ATTEMPTS) {
+      await User.update(user.id, { verificationCode: null, verificationCodeExpire: null });
+      return res.status(400).json(INVALID_CODE);
     }
 
-    const resetToken = generateToken(user.id);
+    if (!codesMatch(user.verificationCode, code)) {
+      await User.update(user.id, { verificationAttempts: attempts + 1 });
+      return res.status(400).json(INVALID_CODE);
+    }
+
+    const resetToken = jwt.sign(
+      { id: user.id, purpose: "password-reset", code: user.verificationCode },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" },
+    );
+
     res.json({
       success: true,
       message: "קוד אומת בהצלחה",
@@ -410,109 +472,48 @@ export const verifyCode = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Verify Code Error:", error.message);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "שגיאת שרת" });
   }
 };
 
-// @desc    Reset password
-// @route   PUT /api/auth/resetpassword/:code
-// @access  Public
-export const resetPassword = async (req, res) => {
+// @desc    Set a new password using the token from verifyCode
+// @route   POST /api/auth/changepassword
+// @access  Public (requires a valid reset token)
+export const changePassword = async (req, res) => {
   try {
-    const { password } = req.body;
-    const { code } = req.params;
+    const { newPassword, resetToken } = req.body;
 
-    if (!password)
-      return res
-        .status(400)
-        .json({ success: false, message: "נא להזין סיסמה חדשה" });
-    if (!code)
-      return res.status(400).json({ success: false, message: "קוד אימות חסר" });
+    if (!newPassword || !resetToken) {
+      return res.status(400).json({
+        success: false,
+        message: "סיסמה חדשה וקוד איפוס נדרשים",
+      });
+    }
 
-    const users = await User.findAll();
-    const user = users.find(
-      (u) =>
-        u.verificationCode === code && u.verificationCodeExpire > Date.now(),
-    );
+    let payload;
+    try {
+      payload = jwt.verify(resetToken, process.env.JWT_SECRET);
+    } catch {
+      return res.status(400).json({ success: false, message: "קישור האיפוס פג תוקף. נסה שוב" });
+    }
 
-    if (!user)
-      return res
-        .status(400)
-        .json({ success: false, message: "קוד לא תקף או פג תוקף" });
+    if (payload?.purpose !== "password-reset" || !payload.id) {
+      return res.status(400).json({ success: false, message: "קוד איפוס לא תקין" });
+    }
 
-    await User.updatePassword(user.id, password);
+    const user = await User.findById(payload.id);
+    // The code is cleared after use, so each reset token works exactly once.
+    if (!user || !user.verificationCode || !codesMatch(user.verificationCode, payload.code)) {
+      return res.status(400).json({ success: false, message: "קישור האיפוס כבר נוצל או פג תוקף" });
+    }
+
+    await User.updatePassword(user.id, newPassword);
     await User.update(user.id, {
       verificationCode: null,
       verificationCodeExpire: null,
+      verificationAttempts: 0,
     });
 
-    const token = generateToken(user.id);
-    res.json({ success: true, message: "הסיסמה שונתה בהצלחה", token });
-  } catch (error) {
-    console.error("❌ Reset Password Error:", error.message);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// @desc    Change password after verification
-// @route   POST /api/auth/changepassword
-// @access  Public
-export const changePassword = async (req, res) => {
-  try {
-    const { email, newPassword, resetToken } = req.body;
-
-    console.log("🔐 Change Password Request");
-    console.log("📧 Email:", email);
-
-    if (!email || !newPassword || !resetToken) {
-      return res.status(400).json({
-        success: false,
-        message: "אימייל, סיסמה חדשה וtoken נדרשים",
-      });
-    }
-
-    if (newPassword.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: "הסיסמה חייבת להיות לפחות 6 תווים",
-      });
-    }
-
-    // Find user
-    const user = await User.findByEmail(email);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "משתמש לא נמצא",
-      });
-    }
-
-    // Verify that verification code is still valid (and resetToken would be checked on frontend)
-    console.log("⏰ Checking code expiration...");
-    if (
-      !user.verificationCodeExpire ||
-      user.verificationCodeExpire < Date.now()
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "הקוד פג תוקף",
-      });
-    }
-
-    console.log("🔐 Updating password...");
-    // Update password
-    await User.updatePassword(user.id, newPassword);
-
-    // Clear verification code
-    await User.update(user.id, {
-      verificationCode: undefined,
-      verificationCodeExpire: undefined,
-    });
-
-    console.log("✅ Password changed successfully");
-
-    // Generate new JWT token
     const token = generateToken(user.id);
 
     res.json({
@@ -524,14 +525,15 @@ export const changePassword = async (req, res) => {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        role: user.role,
       },
     });
   } catch (error) {
+    if (error.message?.includes("הסיסמה")) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     console.error("❌ Change Password Error:", error.message);
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(500).json({ success: false, message: "שגיאת שרת" });
   }
 };
 
@@ -592,6 +594,11 @@ export const updateUserRole = async (req, res) => {
       });
     }
 
+    const denied = checkUserManagement(req.user, user, role);
+    if (denied) {
+      return res.status(403).json({ success: false, message: denied });
+    }
+
     const updatedUser = await User.update(id, { role });
     console.log("✅ User role updated:", updatedUser.role);
 
@@ -635,6 +642,11 @@ export const deleteUser = async (req, res) => {
       });
     }
 
+    const denied = checkUserManagement(req.user, user);
+    if (denied) {
+      return res.status(403).json({ success: false, message: denied });
+    }
+
     await User.delete(id);
     console.log("✅ User deleted successfully");
 
@@ -676,6 +688,11 @@ export const blockUser = async (req, res) => {
         success: false,
         message: "משתמש לא נמצא",
       });
+    }
+
+    const denied = checkUserManagement(req.user, user);
+    if (denied) {
+      return res.status(403).json({ success: false, message: denied });
     }
 
     const updatedUser = await User.update(id, { blocked });

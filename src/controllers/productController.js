@@ -29,10 +29,18 @@ export const getProducts = async (req, res) => {
       page = 1,
       search,
       featured,
+      includeInactive,
     } = req.query;
-    const skip = (page - 1) * limit;
+    const pageSize = Math.min(Math.max(parseInt(limit, 10) || 100, 1), 200);
+    const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
+    const skip = (pageNumber - 1) * pageSize;
 
-    let filter = {};
+    // Inactive products are hidden from the storefront; only staff asking for
+    // them explicitly (the admin product list) get the full catalog.
+    const isStaff = req.user?.role === "admin" || req.user?.role === "roi";
+    const showInactive = isStaff && includeInactive === "true";
+
+    let filter = showInactive ? {} : { status: { $ne: "inactive" } };
 
     if (category && category !== "הכל") {
       filter.category = category;
@@ -45,9 +53,12 @@ export const getProducts = async (req, res) => {
     }
 
     if (search) {
+      // Literal match: escaping keeps a crafted pattern from turning the
+      // public search into a slow (ReDoS) regex.
+      const term = String(search).slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
+        { name: { $regex: term, $options: "i" } },
+        { description: { $regex: term, $options: "i" } },
       ];
     }
 
@@ -58,25 +69,30 @@ export const getProducts = async (req, res) => {
     let products = await Product.findAll(filter);
 
     if (featured === "true") {
-      products = products
-        .filter((p) => p.status !== "inactive")
-        .sort(
-          (a, b) =>
-            (a.featuredOrder ?? 0) - (b.featuredOrder ?? 0) ||
-            a.name.localeCompare(b.name, "he"),
-        );
+      products = products.sort(
+        (a, b) =>
+          (a.featuredOrder ?? 0) - (b.featuredOrder ?? 0) ||
+          a.name.localeCompare(b.name, "he"),
+      );
     }
 
-    const paginatedProducts = products.slice(skip, skip + parseInt(limit));
+    const paginatedProducts = products.slice(skip, skip + pageSize);
     const total = products.length;
+
+    // The catalog is identical for every visitor, so let browsers and CDNs
+    // reuse it briefly. Staff views stay uncached so edits show immediately.
+    res.set(
+      "Cache-Control",
+      req.user ? "private, no-store" : "public, max-age=60, stale-while-revalidate=300",
+    );
 
     res.json({
       success: true,
       message: "Products retrieved successfully",
       data: paginatedProducts,
       total,
-      page: parseInt(page),
-      limit: parseInt(limit),
+      page: pageNumber,
+      limit: pageSize,
     });
   } catch (error) {
     console.error("❌ Error getting products:", error);

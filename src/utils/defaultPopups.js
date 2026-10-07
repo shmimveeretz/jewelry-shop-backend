@@ -6,7 +6,7 @@ import MarketingPopupMongo from "../models/MarketingPopupMongo.js";
  * offer — and so an admin has a working example to copy from.
  */
 const DEFAULT_NEWSLETTER_POPUP = {
-  name: "ניוזלטר — 10% הנחה",
+  name: "ניוזלטר — 5% הנחה",
   status: "active",
   priority: 0,
   trigger: { type: "timeDelay", delayMs: 5000 },
@@ -31,7 +31,7 @@ const DEFAULT_NEWSLETTER_POPUP = {
       weight: 100,
       content: {
         headline: "הצטרפו לקהילה השמימית שלנו",
-        subheadline: "הירשמו ותקבלו 10% הנחה לקנייה הראשונה",
+        subheadline: "הירשמו ותקבלו 5% הנחה לקנייה הראשונה",
         ctaLabel: "אני רוצה הנחה",
         ctaAction: "newsletter",
         dismissLabel: "לא תודה, אמשיך לגלוש",

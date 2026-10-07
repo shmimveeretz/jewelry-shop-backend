@@ -10,9 +10,13 @@ export const normalizeIP = (ip) => {
   return normalized;
 };
 
+/**
+ * Uses req.ip, which Express derives from X-Forwarded-For according to the
+ * "trust proxy" setting (one hop: Render's proxy). Reading the header's first
+ * entry directly would let any client spoof its IP and dodge IP blocks.
+ */
 export const getClientIP = (req) => {
   const raw =
-    req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
     req.ip ||
     req.connection?.remoteAddress ||
     req.socket?.remoteAddress ||

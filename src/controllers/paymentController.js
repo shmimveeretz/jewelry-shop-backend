@@ -1,162 +1,94 @@
-import axios from "axios";
+import crypto from "crypto";
 import Order from "../models/Order.js";
-import OrderMongo from "../models/OrderMongo.js";
-import UserMongo from "../models/UserMongo.js";
 import PendingOrderMongo from "../models/PendingOrderMongo.js";
-import Product from "../models/Product.js";
-import ProductMongo from "../models/ProductMongo.js";
-import {
-  sendCustomerOrderInvoice,
-  sendBusinessOwnerOrderNotification,
-  ensureOrderEmailsSent,
-} from "../utils/emailService.js";
+import { ensureOrderEmailsSent } from "../utils/emailService.js";
 import {
   createPayPlusTransaction,
-  generatePaymentLink,
   createManualDocument,
-  getTransactionByPageRequestUid,
 } from "../utils/payPlusAPI.js";
-import { getExtraLetterPerBraceletCost, formatItemNameWithExtraLetters, allowsExtraLettersPricing, normalizeExtraHebrewLetters, MAX_EXTRA_LETTERS } from "../utils/extraHebrewLetters.js";
+import { priceCart } from "../utils/orderPricing.js";
+import { saveVerifiedOrder } from "../utils/paidOrder.js";
 import { buildBackendUrl } from "../utils/backendUrl.js";
-// #region agent log
-import { dbg } from "../utils/debugLog.js";
-// #endregion
+import { isStoreClosedForShabbat } from "../utils/shabbat.js";
 
-// @desc    Verify PayPlus payment and save order to DB
-// @route   GET /api/payment/verify/:transactionUid
-// @access  Public
-export const verifyPayment = async (req, res) => {
-  try {
-    const { transactionUid } = req.params;
-    const orderDataRaw = req.query.orderData;
+const trimTo = (value, max) =>
+  typeof value === "string" ? value.trim().slice(0, max) : "";
 
-    if (!transactionUid) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Missing transactionUid" });
-    }
-
-    // Idempotency — don't save the same order twice
-    const existing = await OrderMongo.findOne({ transactionUid });
-    if (existing) {
-      return res.json({
-        success: true,
-        data: existing,
-        message: "Order already saved",
-      });
-    }
-
-    // Parse orderData sent by frontend as query param
-    let orderData;
-    if (orderDataRaw) {
-      try {
-        orderData = JSON.parse(decodeURIComponent(orderDataRaw));
-      } catch {
-        return res
-          .status(400)
-          .json({ success: false, message: "Invalid orderData format" });
-      }
-    } else {
-      return res
-        .status(400)
-        .json({ success: false, message: "Missing orderData" });
-    }
-
-    // Create the order
-    const order = await Order.createFromPayment(orderData, transactionUid);
-
-    // Send confirmation emails (non-blocking)
-    const emailData = {
-      orderNumber: transactionUid,
-      items: order.items,
-      shippingAddress: order.shippingAddress,
-      itemsPrice: order.itemsPrice,
-      taxPrice: 0,
-      shippingPrice: order.shippingPrice,
-      totalPrice: order.totalPrice,
-      paymentInfo: {
-        method: "credit_card",
-        status: "completed",
-        transactionId: transactionUid,
-      },
-      createdAt: order.createdAt,
-      customerEmail: order.customerEmail,
-    };
-
-    Promise.all([
-      order.customerEmail
-        ? sendCustomerOrderInvoice(order.customerEmail, emailData)
-        : Promise.resolve(),
-      sendBusinessOwnerOrderNotification({ ...emailData, userId: "guest" }),
-    ]).catch((err) => console.error("❌ Order email error:", err.message));
-
-    res.json({ success: true, data: order });
-  } catch (error) {
-    console.error("❌ Verify Payment Error:", error.message);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// @desc    Create payment intent with PayPlus
-// @route   POST /apicreate-intent
-// @access  Private
+// @desc    Create a PayPlus payment page for the current cart
+// @route   POST /api/payment/create-intent
+// @access  Public (guests can pay; a logged-in user is linked to the order)
+//
+// Every amount is recomputed from the database by priceCart. Prices, totals
+// and discount percentages in the request body are ignored on purpose.
 export const createPaymentIntent = async (req, res) => {
   try {
     const {
-      amount,
-      currency = "ILS",
       orderItems,
       items,
       customerName,
       customerEmail,
       customerPhone,
       shippingAddress,
+      couponCode,
     } = req.body;
 
-    // Generate unique order ID (with or without user)
-    const userId = req.user?.id || `guest_${Date.now()}`;
-    const orderId = `order_${Date.now()}_${userId}`;
+    if (await isStoreClosedForShabbat()) {
+      return res.status(423).json({
+        success: false,
+        closedForShabbat: true,
+        message: "האתר סגור בשבת ובחג. נשמח לקבל את הזמנתך מיד עם צאת השבת או החג.",
+      });
+    }
+
+    const cart = await priceCart(orderItems || items, couponCode || null, {
+      country: shippingAddress?.country,
+    });
+
+    const userId = req.user?.id || null;
+    const orderId = `order_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
     const frontendBase = (
       process.env.FRONTEND_URL || "https://shamaimveeretz.com"
     ).replace(/\/+$/, "");
 
-    // Build items array for PayPlus invoice
-    const sourceItems = orderItems || items;
-    const formattedItems =
-      sourceItems && sourceItems.length > 0
-        ? sourceItems.map((item) => ({
-            name: item.name,
-            quantity: item.quantity || 1,
-            price: item.price,
-          }))
-        : [{ name: "General Jewelry", quantity: 1, price: req.body.amount }];
-
-    // Derive total directly from items so PayPlus never rejects with
-    // "global-price-is-not-equal-to-total-items-sum" due to coupon rounding
-    const calculatedTotal = formattedItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0,
-    );
-
-    // Build customer object for PayPlus invoice
     const customer = {
-      customer_name:
-        customerName ||
-        shippingAddress?.name ||
-        shippingAddress?.fullName ||
-        "",
-      email: customerEmail || shippingAddress?.email || "",
-      phone: customerPhone || shippingAddress?.phone || "",
+      customer_name: trimTo(customerName || shippingAddress?.name || shippingAddress?.fullName, 120),
+      email: trimTo(customerEmail || shippingAddress?.email, 200),
+      phone: trimTo(customerPhone || shippingAddress?.phone, 30),
     };
 
-    // Format payload according to PayPlus API spec
+    if (!customer.customer_name || !/^\S+@\S+\.\S+$/.test(customer.email)) {
+      return res.status(400).json({
+        success: false,
+        message: "נא להזין שם מלא וכתובת אימייל תקינה",
+      });
+    }
+
+    const address = trimTo(shippingAddress?.street || shippingAddress?.address, 200);
+    const city = trimTo(shippingAddress?.city, 100);
+    if (!address || !city) {
+      return res.status(400).json({
+        success: false,
+        message: "נא להזין כתובת ועיר למשלוח",
+      });
+    }
+
+    // Shipping is its own invoice line, so PayPlus' item sum equals the amount
+    const invoiceItems = cart.items.map((item) => ({
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+    }));
+    if (cart.shipping.price > 0) {
+      invoiceItems.push({ name: "משלוח", quantity: 1, price: cart.shipping.price });
+    }
+
     const paymentPayload = {
-      payment_page_uid: process.env.PAYPLUS_MERCHANT_ID || "shmimveeretz.com", // Your payment page UID
-      charge_method: 1, // 1 = charge only (תשלום בלבד)
-      amount: Math.round(calculatedTotal * 100) / 100, // Derived from items — guaranteed to match
-      currency_code: currency,
+      payment_page_uid: process.env.PAYPLUS_MERCHANT_ID,
+      charge_method: 1, // 1 = charge only
+      amount: cart.totalPrice,
+      currency_code: "ILS",
       customer,
-      items: formattedItems,
+      items: invoiceItems,
       sendEmailApproval: true,
       sendEmailFailure: false,
       refURL_callback: buildBackendUrl("/api/payment/webhook"),
@@ -164,306 +96,73 @@ export const createPaymentIntent = async (req, res) => {
       refURL_failure: `${frontendBase}/payment-failure`,
       initial_invoice: true,
       hide_identification_id: false,
-      more_info: orderId, // Send order ID in more_info
+      more_info: orderId,
     };
-
-    // #region agent log
-    dbg({
-      runId: "run2",
-      hypothesisId: "H1",
-      location: "paymentController.js:createPaymentIntent:webhook-url",
-      message: "Payment webhook callback URL built",
-      data: { callbackUrl: paymentPayload.refURL_callback },
-    });
-    // #endregion
-
-    console.log(
-      "📤 Sending to PayPlus:",
-      JSON.stringify(paymentPayload, null, 2),
-    );
 
     const response = await createPayPlusTransaction(paymentPayload);
 
-    console.log("📥 PayPlus response:", JSON.stringify(response, null, 2));
-
     const paymentUrl = response?.data?.payment_page_link;
-    const pageRequestUid = response?.data?.page_request_uid || orderId;
+    const pageRequestUid = response?.data?.page_request_uid;
 
-    if (!paymentUrl) {
-      throw new Error(
-        `PayPlus - Invalid response format. Full: ${JSON.stringify(response)}`,
-      );
+    if (!paymentUrl || !pageRequestUid) {
+      console.error("PayPlus returned no payment link:", JSON.stringify(response));
+      throw new Error("שגיאה ביצירת עמוד תשלום");
     }
 
-    // Persist the pending order so the webhook can retrieve it
-    // even if the customer's browser never reaches the success page
-    if (pageRequestUid) {
-      PendingOrderMongo.create({
-        pageRequestUid,
-        orderData: {
-          orderId,
-          customerName: customer.customer_name,
-          customerEmail: customer.email,
-          customerPhone: customer.phone,
-          items: (sourceItems || []).map((i) => {
-            const selections = i.selections || i.selectedOptions || {};
-            const extraLetters = Array.isArray(selections.extraLetters)
-              ? selections.extraLetters
-              : [];
-            return {
-              productId: i.productId || "",
-              name: formatItemNameWithExtraLetters(i.name, extraLetters),
-              price: i.price,
-              quantity: i.quantity || 1,
-              selectedOptions: i.selectedOptions || {},
-              selections: {
-                metalType: selections.metalType || "",
-                length: selections.length || "",
-                jewelryType: selections.jewelryType || "",
-                extraLetters,
-              },
-            };
-          }),
-          shippingAddress: {
-            fullName: customer.customer_name,
-            address: shippingAddress?.street || shippingAddress?.address || "",
-            city: shippingAddress?.city || "",
-            zipCode: shippingAddress?.zipCode || "",
-          },
-          itemsPrice: req.body.itemsPrice ?? calculatedTotal,
-          shippingPrice: req.body.shippingPrice ?? 0,
-          totalPrice: req.body.totalPrice ?? calculatedTotal,
-          couponCode: req.body.couponCode || null,
-          discountPercent: Number(req.body.discountPercent) || 0,
+    // Persisted before redirecting so the webhook can build the order even if
+    // the customer never returns to the success page.
+    await PendingOrderMongo.create({
+      pageRequestUid,
+      orderData: {
+        orderId,
+        userId,
+        customerName: customer.customer_name,
+        customerEmail: customer.email,
+        customerPhone: customer.phone,
+        items: cart.items,
+        shippingAddress: {
+          fullName: customer.customer_name,
+          address,
+          city,
+          zipCode: trimTo(shippingAddress?.zipCode, 20),
+          country: cart.shipping.country,
         },
-      }).catch((err) =>
-        console.error("❌ PendingOrder save error:", err.message),
-      );
-    }
+        itemsPrice: cart.itemsPrice,
+        shippingPrice: cart.shipping.price,
+        totalPrice: cart.totalPrice,
+        couponCode: cart.coupon?.code || null,
+        discountPercent: cart.coupon?.discountPercent || 0,
+      },
+    });
 
     res.json({
       success: true,
       paymentPageUrl: paymentUrl,
       transactionUid: pageRequestUid,
       orderId,
+      totalPrice: cart.totalPrice,
+      shippingPrice: cart.shipping.price,
     });
   } catch (error) {
     console.error("PayPlus Error:", error.response?.data || error.message);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: error.message || "שגיאה ביצירת עסקה",
-      debug: process.env.NODE_ENV !== "production" ? error.message : undefined,
+      message: error.statusCode ? error.message : "שגיאה ביצירת עסקה",
     });
   }
 };
 
-// @desc    Create order after successful payment
-// @route   POST /apicreate-order
-// @access  Public (supports both authenticated users and guests)
-export const createOrder = async (req, res) => {
-  try {
-    // Log what we receive for debugging
-    console.log("📥 Received order data:");
-    console.log("- Full body:", JSON.stringify(req.body, null, 2));
-    console.log("- Items:", req.body.items);
-    console.log("- Items length:", req.body.items?.length);
-    console.log("- First item:", req.body.items?.[0]);
-    console.log("👤 User:", req.user ? req.user.id : "Guest");
-
-    const {
-      items,
-      shippingAddress,
-      paymentInfo,
-      itemsPrice,
-      taxPrice,
-      shippingPrice,
-      totalPrice,
-      totalAmount, // Alternative field name
-      customerEmail, // For guest checkout
-      customerName, // For guest checkout
-      customerPhone, // For guest checkout
-    } = req.body;
-
-    // Normalize data for both formats (old and new)
-    const normalizedItems =
-      items?.map((item) => ({
-        product: item.product || item.productId || item.id,
-        productId: item.productId || item.product || item.id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity || 1,
-        selectedOptions: item.selectedOptions || {},
-      })) || [];
-
-    const normalizedShippingAddress = {
-      name:
-        shippingAddress?.name ||
-        shippingAddress?.fullName ||
-        customerName ||
-        "",
-      phone: shippingAddress?.phone || customerPhone || "",
-      email: shippingAddress?.email || customerEmail || "",
-      street: shippingAddress?.street || shippingAddress?.address || "",
-      address: shippingAddress?.address || shippingAddress?.street || "",
-      city: shippingAddress?.city || "",
-      zipCode: shippingAddress?.zipCode || "",
-      country: shippingAddress?.country || "ישראל",
-    };
-
-    const normalizedPaymentInfo = paymentInfo || {
-      method: "credit_card",
-      transactionId: "",
-      status: "pending",
-    };
-
-    // Use totalAmount if totalPrice is not provided
-    const finalTotalPrice = totalPrice || totalAmount || itemsPrice || 0;
-    const finalItemsPrice = itemsPrice || finalTotalPrice;
-    const finalTaxPrice = taxPrice || 0;
-    const finalShippingPrice = shippingPrice || 0;
-
-    // Validate required fields
-    if (!normalizedItems || !Array.isArray(normalizedItems)) {
-      console.log("❌ Validation failed: Items is not an array");
-      return res.status(400).json({
-        success: false,
-        message: "פורמט פריטים לא תקין.",
-        debug: {
-          receivedItems: items,
-          normalizedItems,
-          typeOf: typeof items,
-          isArray: Array.isArray(items),
-        },
-      });
-    }
-
-    if (normalizedItems.length === 0) {
-      console.log("⚠️ Warning: Empty items array");
-      return res.status(400).json({
-        success: false,
-        message: "לא נמצאו פריטים בהזמנה.",
-      });
-    }
-
-    if (!normalizedShippingAddress.name || !normalizedShippingAddress.phone) {
-      console.log("❌ Validation failed: Missing shipping info");
-      return res.status(400).json({
-        success: false,
-        message: "חסרים פרטי משלוח. אנא מלא שם וטלפון.",
-        debug: {
-          receivedAddress: shippingAddress,
-          normalizedAddress: normalizedShippingAddress,
-        },
-      });
-    }
-
-    // Verify stock availability - skipped (products not in database yet)
-    // When products are added to database, uncomment this section
-    /* 
-    for (let item of items) {
-      const product = await Product.findById(item.product);
-      if (!product) {
-        return res.status(404).json({
-          success: false,
-          message: `מוצר ${item.name} לא נמצא`,
-        });
-      }
-      if (product.stock < item.quantity) {
-        return res.status(400).json({
-          success: false,
-          message: `אין מספיק מלאי עבור ${product.name}`,
-        });
-      }
-    }
-    */
-
-    // Create order (support both authenticated users and guests)
-    const order = await Order.create({
-      userId: req.user?.id || null, // null for guests
-      items: normalizedItems,
-      shippingAddress: normalizedShippingAddress,
-      paymentInfo: normalizedPaymentInfo,
-      itemsPrice: finalItemsPrice,
-      taxPrice: finalTaxPrice,
-      shippingPrice: finalShippingPrice,
-      totalPrice: finalTotalPrice,
-    });
-
-    console.log("✅ Order created successfully:", order.orderNumber);
-
-    // Product stock update - skipped (products not in database yet)
-
-    // Cart clearing - skipped for guests
-    if (req.user?.id) {
-      const User = (await import("../models/User.js")).default;
-      await User.clearCart(req.user.id);
-      console.log("✅ עגלה נוקתה למשתמש רשום");
-    } else {
-      console.log("ℹ️ אורח - אין עגלה לנקות");
-    }
-
-    // Send order confirmation emails
-    try {
-      // Determine customer email (from user account or guest email)
-      let userEmail = null;
-      let user = null;
-
-      if (req.user?.id) {
-        // Authenticated user
-        const User = (await import("../models/User.js")).default;
-        user = await User.findById(req.user.id);
-        userEmail = user?.email;
-      } else {
-        // Guest user - use provided email
-        userEmail = customerEmail || normalizedShippingAddress.email;
-      }
-
-      // Prepare order data for emails
-      const orderEmailData = {
-        orderNumber: order.orderNumber,
-        items: order.items,
-        shippingAddress: order.shippingAddress,
-        itemsPrice: order.itemsPrice,
-        taxPrice: order.taxPrice,
-        shippingPrice: order.shippingPrice,
-        totalPrice: order.totalPrice,
-        paymentInfo: order.paymentInfo,
-        createdAt: order.createdAt,
-        userId: req.user?.id || "guest",
-        customerEmail: userEmail,
-      };
-
-      // Send invoice to customer (if email is provided)
-      if (userEmail) {
-        await sendCustomerOrderInvoice(userEmail, orderEmailData);
-        console.log(`✅ חשבונית נשלחה ללקוח: ${userEmail}`);
-      } else {
-        console.log("⚠️ לא סופק אימייל ללקוח - החשבונית לא נשלחה");
-      }
-
-      // Send notification to business owner
-      await sendBusinessOwnerOrderNotification(orderEmailData);
-      console.log(`✅ התראה נשלחה לבעל העסק`);
-    } catch (emailError) {
-      // Log error but don't fail the order creation
-      console.error("❌ שגיאה בשליחת מיילים:", emailError.message);
-    }
-
-    res.status(201).json({
-      success: true,
-      data: order,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
+/** Order owners and staff may read an order; everyone else gets a 403. */
+export function canViewOrder(order, user) {
+  if (!order || !user) return false;
+  if (user.role === "admin" || user.role === "roi") return true;
+  const ownerId = order.userId?._id ?? order.userId;
+  return Boolean(ownerId) && String(ownerId) === String(user.id);
+}
 
 // @desc    Get order by ID
-// @route   GET /apiorders/:id
-// @access  Private
+// @route   GET /api/payment/orders/:id
+// @access  Private (owner or admin)
 export const getOrder = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
@@ -475,8 +174,7 @@ export const getOrder = async (req, res) => {
       });
     }
 
-    // Make sure user is order owner or admin
-    if (order.user !== req.user.id && req.user.role !== "admin") {
+    if (!canViewOrder(order, req.user)) {
       return res.status(403).json({
         success: false,
         message: "אין לך הרשאה לצפות בהזמנה זו",
@@ -496,7 +194,7 @@ export const getOrder = async (req, res) => {
 };
 
 // @desc    Get user orders
-// @route   GET /apimy-orders
+// @route   GET /api/payment/my-orders
 // @access  Private
 export const getMyOrders = async (req, res) => {
   try {
@@ -515,508 +213,71 @@ export const getMyOrders = async (req, res) => {
   }
 };
 
-// @desc    Get all orders (Admin)
-// @route   GET /apiorders
-// @access  Private/Admin
-export const getAllOrders = async (req, res) => {
-  try {
-    const orders = await Order.findAll();
+/**
+ * PayPlus signs each callback: header `hash` = base64(HMAC-SHA256(body, secret)).
+ * The raw bytes are checked first; JSON.stringify of the parsed body is the
+ * fallback PayPlus' own sample uses.
+ */
+function isSignedByPayPlus(req) {
+  const secret = process.env.PAYPLUS_SECRET_KEY;
+  const received = req.headers.hash;
+  if (!secret || typeof received !== "string" || !received) return false;
 
-    res.json({
-      success: true,
-      count: orders.length,
-      data: orders,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
+  const candidates = [req.rawBody, JSON.stringify(req.body)].filter(Boolean);
+  const receivedBuf = Buffer.from(received);
 
-// @desc    Update order status (Admin)
-// @route   PUT /apiorders/:id/status
-// @access  Private/Admin
-export const updateOrderStatus = async (req, res) => {
-  try {
-    const { status, note } = req.body;
-
-    const order = await Order.updateStatus(req.params.id, status, note);
-
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "הזמנה לא נמצאה",
-      });
-    }
-
-    res.json({
-      success: true,
-      data: order,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-// @desc    Test order creation with demo data (for testing emails)
-// @route   POST /apitest-order
-// @access  Public (for demo purposes)
-export const testOrderDemo = async (req, res) => {
-  try {
-    const { customerEmail, customerName, customerPhone, items } = req.body;
-
-    // Validate required fields
-    if (!customerEmail || !customerName || !customerPhone) {
-      return res.status(400).json({
-        success: false,
-        message: "נא למלא את כל השדות הנדרשים: אימייל, שם וטלפון",
-      });
-    }
-
-    // Create demo order data
-    const demoOrder = {
-      orderNumber: `DEMO${Date.now().toString().slice(-6)}`,
-      items: items || [
-        {
-          name: "שרשרת שמע ישראל - זהב",
-          quantity: 1,
-          price: 450,
-        },
-        {
-          name: "צמיד ברכה - כסף",
-          quantity: 2,
-          price: 120,
-        },
-      ],
-      shippingAddress: {
-        name: customerName,
-        phone: customerPhone,
-        street: "רחוב הדמו 123",
-        city: "תל אביב",
-        zipCode: "12345",
-        country: "ישראל",
-      },
-      itemsPrice: items
-        ? items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-        : 690,
-      taxPrice: 0,
-      shippingPrice: 30,
-      totalPrice: items
-        ? items.reduce((sum, item) => sum + item.price * item.quantity, 0) + 30
-        : 720,
-      paymentInfo: {
-        method: "credit_card",
-        transactionId: `DEMO_TX_${Date.now()}`,
-        status: "completed",
-      },
-      createdAt: new Date().toISOString(),
-      userId: "demo_user_id",
-      customerEmail: customerEmail,
-    };
-
-    console.log("🧪 יוצר הזמנת דמה לבדיקת מיילים...");
-
-    // Send order confirmation emails
-    try {
-      // Send invoice to customer
-      await sendCustomerOrderInvoice(customerEmail, demoOrder);
-      console.log(`✅ חשבונית נשלחה ללקוח: ${customerEmail}`);
-
-      // Send notification to business owner
-      await sendBusinessOwnerOrderNotification(demoOrder);
-      console.log(`✅ התראה נשלחה לבעל העסק`);
-
-      res.status(200).json({
-        success: true,
-        message: "הזמנת דמה נוצרה והמיילים נשלחו בהצלחה! 🎉",
-        data: {
-          orderNumber: demoOrder.orderNumber,
-          customerEmail,
-          totalPrice: demoOrder.totalPrice,
-          emailsSent: {
-            customer: true,
-            businessOwner: true,
-          },
-        },
-      });
-    } catch (emailError) {
-      console.error("❌ שגיאה בשליחת מיילים:", emailError.message);
-      res.status(500).json({
-        success: false,
-        message: "שגיאה בשליחת המיילים",
-        error: emailError.message,
-      });
-    }
-  } catch (error) {
-    console.error("❌ שגיאה כללית:", error.message);
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-// @desc    Debug endpoint - see what data is received
-// @route   POST /apidebug-order
-// @access  Public
-export const debugOrder = async (req, res) => {
-  try {
-    console.log(
-      "🔍 DEBUG - Full request body:",
-      JSON.stringify(req.body, null, 2),
+  return candidates.some((message) => {
+    const expected = Buffer.from(
+      crypto.createHmac("sha256", secret).update(message).digest("base64"),
     );
-    console.log("🔍 DEBUG - User:", req.user ? req.user.id : "No user (Guest)");
-
-    res.json({
-      success: true,
-      message: "Debug info - check server console",
-      receivedData: {
-        body: req.body,
-        hasUser: !!req.user,
-        userId: req.user?.id || null,
-        hasItems: !!req.body.items,
-        itemsCount: req.body.items?.length || 0,
-        hasShippingAddress: !!req.body.shippingAddress,
-        hasCustomerEmail: !!req.body.customerEmail,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
+    return (
+      expected.length === receivedBuf.length &&
+      crypto.timingSafeEqual(expected, receivedBuf)
+    );
+  });
+}
 
 // @desc    Handle PayPlus server-to-server callback
 // @route   POST /api/payment/webhook
-// @access  Public (called by PayPlus, never by the browser)
-//
-// PayPlus POSTs here after every transaction attempt.
-// We respond 200 immediately (otherwise PayPlus retries), then
-// save the order asynchronously using the PendingOrder we stored
-// when the payment link was created.
+// @access  PayPlus only (HMAC signed)
 export const payPlusWebhook = async (req, res) => {
-  // #region agent log
-  dbg({
-    runId: "run2",
-    hypothesisId: "H1,H5",
-    location: "paymentController.js:payPlusWebhook:entry",
-    message: "PayPlus webhook hit",
-    data: {
-      originalUrl: req.originalUrl,
-      method: req.method,
-      hasTransaction: Boolean(req.body?.transaction),
-      bodyKeys: Object.keys(req.body || {}),
-    },
-  });
-  // #endregion
+  if (!isSignedByPayPlus(req)) {
+    console.warn("🚫 Rejected unsigned/invalid PayPlus webhook from", req.ip);
+    return res.status(401).send("Invalid signature");
+  }
 
-  // Respond immediately — PayPlus requires a fast 200
+  // Respond immediately — PayPlus retries on slow responses
   res.status(200).send("OK");
 
   try {
-    // PayPlus wraps the data in a `transaction` key in newer versions
     const transaction = req.body?.transaction ?? req.body ?? {};
-
     const pageRequestUid =
-      transaction.payment_page_request_uid ||
-      transaction.page_request_uid ||
-      null;
+      transaction.payment_page_request_uid || transaction.page_request_uid || null;
+    const statusCode = String(transaction.status_code ?? "");
 
-    const statusCode = transaction.status_code ?? null;
-    const isApproved =
-      statusCode === "000" ||
-      statusCode === 0 ||
-      statusCode === "0" ||
-      transaction.status === "approved" ||
-      transaction.payment_status === "completed";
-
-    console.log("📩 PayPlus Webhook received:");
-    console.log("  page_request_uid:", pageRequestUid);
-    console.log("  status_code:", statusCode, "| approved:", isApproved);
-
-    // #region agent log
-    const dbgWebhookBranch = (branch, extra = {}) =>
-      dbg({
-        runId: "run2",
-        hypothesisId: "H2,H5",
-        location: "paymentController.js:payPlusWebhook:branch",
-        message: `Webhook branch: ${branch}`,
-        data: {
-          branch,
-          statusCode,
-          isApproved,
-          uidPrefix: pageRequestUid ? String(pageRequestUid).slice(0, 8) : null,
-          ...extra,
-        },
-      });
-    // #endregion
-
-    if (!isApproved) {
+    if (statusCode !== "000") {
       console.warn(`⚠️ Webhook: not approved — status_code: ${statusCode}`);
-      dbgWebhookBranch("not-approved");
       return;
     }
-
     if (!pageRequestUid) {
-      console.warn("⚠️ Webhook: no page_request_uid in payload", req.body);
-      dbgWebhookBranch("no-page-request-uid");
+      console.warn("⚠️ Webhook: no page_request_uid in payload");
       return;
     }
 
-    // Idempotency — if browser already saved the order, still ensure emails go out
-    const existing = await OrderMongo.findOne({
-      transactionUid: pageRequestUid,
+    const { order, created } = await saveVerifiedOrder({
+      pageRequestUid,
+      txData: transaction,
     });
-    if (existing) {
-      console.log(`ℹ️ Webhook: order already exists for ${pageRequestUid}`);
-      dbgWebhookBranch("order-already-exists", {
-        existingOrderId: existing.orderId ?? null,
-        orderEmailsSent: existing.orderEmailsSent === true,
-      });
-      ensureOrderEmailsSent(existing).catch((err) =>
-        console.error(
-          "❌ Webhook order email failed (existing):",
-          err.message,
-        ),
-      );
-      return;
+
+    if (created) {
+      console.log(`✅ Webhook: order saved — ${order.orderId} (${pageRequestUid})`);
     }
 
-    dbgWebhookBranch("proceeding-to-save");
-
-    // Retrieve the pending order we stored before redirecting to PayPlus
-    const pendingDoc = await PendingOrderMongo.findOne({ pageRequestUid });
-    const orderData = pendingDoc?.orderData ?? {};
-
-    // Fall back to data in the webhook payload if pendingOrder is missing
-    const customerName =
-      orderData.customerName ||
-      transaction.customer_name ||
-      transaction.full_name ||
-      "לקוח";
-    const customerEmail =
-      orderData.customerEmail ||
-      transaction.email ||
-      transaction.customer_email ||
-      "";
-    const customerPhone =
-      orderData.customerPhone ||
-      transaction.phone ||
-      transaction.customer_phone ||
-      "";
-    const totalPrice =
-      orderData.totalPrice ??
-      orderData.totalAmount ??
-      Number(transaction.amount) ??
-      0;
-
-    const items = (
-      orderData.items ??
-      (transaction.items || []).map((i) => ({
-        productId: "",
-        name: i.name,
-        price: Number(i.price),
-        quantity: Number(i.quantity) || 1,
-        selectedOptions: {},
-        selections: {},
-      }))
-    ).map((item) => {
-      const selections = item.selections || {};
-      const extraLetters = Array.isArray(selections.extraLetters)
-        ? selections.extraLetters
-        : Array.isArray(item.selectedOptions?.extraLetters)
-          ? item.selectedOptions.extraLetters
-          : [];
-      return {
-        productId: item.productId || "",
-        name: formatItemNameWithExtraLetters(item.name, extraLetters),
-        price: Number(item.price),
-        quantity: item.quantity ?? 1,
-        selectedOptions: item.selectedOptions || {},
-        selections: {
-          metalType: selections.metalType || "",
-          length: selections.length || "",
-          jewelryType: selections.jewelryType || "",
-          extraLetters,
-        },
-      };
-    });
-
-    const publicOrderId =
-      orderData.orderId ||
-      transaction.more_info ||
-      pageRequestUid;
-
-    const newOrder = await OrderMongo.create({
-      customerName,
-      customerEmail,
-      customerPhone,
-      items,
-      shippingAddress: {
-        fullName: orderData.shippingAddress?.fullName || customerName,
-        address: orderData.shippingAddress?.address || "",
-        city: orderData.shippingAddress?.city || "",
-        zipCode: orderData.shippingAddress?.zipCode || "",
-      },
-      itemsPrice: Number(orderData.itemsPrice) || 0,
-      shippingPrice: Number(orderData.shippingPrice) || 0,
-      totalPrice: Number(totalPrice),
-      couponCode: orderData.couponCode || null,
-      discountPercent: Number(orderData.discountPercent) || 0,
-      paymentStatus: "completed",
-      transactionUid: pageRequestUid,
-      orderId: publicOrderId,
-      status: "Pending",
-    });
-
-    console.log(
-      `✅ Webhook: order saved — id: ${newOrder._id}, orderId: ${publicOrderId}, uid: ${pageRequestUid}`,
-    );
-
-    // Clean up pending order (best-effort)
-    pendingDoc?.deleteOne().catch(() => {});
-
-    ensureOrderEmailsSent(newOrder, {
-      customerEmail,
-      customerPhone,
-      customerName,
-    }).catch((err) =>
+    ensureOrderEmailsSent(order).catch((err) =>
       console.error("❌ Webhook order email failed:", err.message),
     );
   } catch (error) {
     console.error("❌ Webhook processing error:", error.message);
-    // #region agent log
-    dbg({
-      runId: "post-fix",
-      hypothesisId: "H2,H5",
-      location: "paymentController.js:payPlusWebhook:processing-error",
-      message: "Webhook processing threw",
-      data: { errorMessage: error.message },
-    });
-    // #endregion
-    // Response already sent — just log
-  }
-};
-
-// @desc    Generate a PayPlus payment link (with initial_invoice: true)
-// @route   POST /api/payment/generate-link
-// @access  Public
-export const generatePaymentLinkHandler = async (req, res) => {
-  try {
-    const {
-      amount,
-      currency_code,
-      description,
-      customerName,
-      customerEmail,
-      customerPhone,
-      moreInfo,
-      items,
-      successUrl,
-      failureUrl,
-    } = req.body;
-
-    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-      return res
-        .status(400)
-        .json({ success: false, message: "amount חייב להיות מספר חיובי" });
-    }
-
-    // ── Server-side price revalidation ────────────────────────────────────────
-    // If each item carries a productId, we re-fetch the price from the DB so the
-    // frontend can never manipulate the charged amount.
-    let validatedItems = Array.isArray(items) ? items : [];
-    let serverTotal = 0;
-
-    const hasProductIds =
-      validatedItems.length > 0 && validatedItems[0]?.productId;
-
-    if (hasProductIds) {
-      validatedItems = await Promise.all(
-        validatedItems.map(async (item) => {
-          const product = await ProductMongo.findOne({ id: item.productId });
-          if (!product) {
-            throw new Error(`מוצר לא נמצא: ${item.productId}`);
-          }
-
-          const sel = item.selections || item.selectedOptions || {};
-          const metalType = sel.metalType ?? "";
-          const jewelryType = sel.jewelryType ?? "";
-          const extraLetters = normalizeExtraHebrewLetters(
-            Array.isArray(sel.extraLetters) ? sel.extraLetters : [],
-          ).slice(0, MAX_EXTRA_LETTERS);
-
-          const metalAddition =
-            product.priceAdditions?.metalType?.[metalType] ?? 0;
-
-          let extraLettersCost = 0;
-          if (allowsExtraLettersPricing(product, jewelryType)) {
-            const perLetter = getExtraLetterPerBraceletCost(
-              product.priceAdditions,
-              metalType,
-            );
-            extraLettersCost = extraLetters.length * perLetter;
-          }
-
-          const unitPrice =
-            (product.price ?? 0) + metalAddition + extraLettersCost;
-
-          return {
-            ...item,
-            name: formatItemNameWithExtraLetters(
-              item.name || product.name,
-              extraLetters,
-            ),
-            price: unitPrice,
-            selections: {
-              metalType,
-              length: sel.length ?? "",
-              jewelryType,
-              extraLetters,
-            },
-          };
-        }),
-      );
-
-      serverTotal = validatedItems.reduce(
-        (sum, item) => sum + item.price * (Number(item.quantity) || 1),
-        0,
-      );
-    }
-
-    // Use the server-computed total when available; otherwise trust the provided amount
-    const resolvedAmount =
-      serverTotal > 0 ? Math.round(serverTotal * 100) / 100 : Number(amount);
-
-    const result = await generatePaymentLink({
-      amount: resolvedAmount,
-      currency_code,
-      description,
-      customerName,
-      customerEmail,
-      customerPhone,
-      moreInfo,
-      items: validatedItems,
-      successUrl,
-      failureUrl,
-      notifyUrl: buildBackendUrl("/api/payment/webhook"),
-    });
-
-    res.json({
-      success: true,
-      paymentPageUrl: result.paymentPageUrl,
-      pageRequestUid: result.pageRequestUid,
-    });
-  } catch (error) {
-    console.error("❌ generatePaymentLinkHandler:", error.message);
-    res.status(500).json({ success: false, message: error.message });
   }
 };
 

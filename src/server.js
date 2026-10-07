@@ -2,6 +2,8 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
+import compression from "compression";
+import mongoose from "mongoose";
 import rateLimit from "express-rate-limit";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 import connectDB from "./config/database.js";
@@ -15,7 +17,6 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 // import smtpRoutes from "./routes/stmpRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
-import emailRoutes from "./routes/emailRoutes.js";
 import couponRoutes from "./routes/couponRoutes.js";
 import newsletterRoutes from "./routes/newsletterRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
@@ -27,6 +28,7 @@ import adminProductPageRoutes from "./routes/adminProductPageRoutes.js";
 import adminPopupRoutes from "./routes/adminPopupRoutes.js";
 import adminLayoutRoutes from "./routes/adminLayoutRoutes.js";
 import Device from "./models/Device.js";
+import { getClientIP } from "./utils/clientIp.js";
 
 // Load env vars
 dotenv.config();
@@ -39,14 +41,24 @@ const app = express();
 // Trust proxy - needed for rate limiting behind a reverse proxy (Render, etc.)
 app.set("trust proxy", 1);
 
+// Flat string query values only. The default "extended" parser turns
+// ?category[$ne]=x into an object, which would reach Mongo filters as an
+// operator (NoSQL injection).
+app.set("query parser", "simple");
+
+// The API never needs to advertise its framework.
+app.disable("x-powered-by");
+
 // Security middleware
 app.use(helmet());
+
+// Product lists and DPP payloads are large JSON; gzip cuts them ~80%.
+app.use(compression());
 
 // --- תיקון 1: עדכון רשימת הדומיינים המורשים ---
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   "https://shmimveeretz.netlify.app",
-  "https://www.shmimveeretz.netlify.app",
   "https://shamaimveeretz.com", // Another typo variant
   "https://www.shamaimveeretz.com", // Another typo variant
   // Local Vite dev server (NODE_ENV=development in Backend/.env)
@@ -100,7 +112,13 @@ app.use("/api/campaign", campaignLimiter);
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  // A single page view makes several API calls (products, categories,
+  // banner, popups…) and an admin session far more; 100 locked out real
+  // shoppers and froze the admin. Abuse-prone endpoints (login, password
+  // reset, contact form, order tracking) keep their own strict limits.
+  max: 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
   message: "יותר מדי בקשות מכתובת IP זו, נסה שוב מאוחר יותר",
   // req.path is relative to the "/api" mount point.
   skip: (req) =>
@@ -115,10 +133,7 @@ app.use("/api", async (req, res, next) => {
   if (req.path === "/admin/devices/track") return next();
 
   try {
-    const clientIP =
-      req.headers["x-forwarded-for"]?.split(",")[0].trim() ||
-      req.ip ||
-      req.connection.remoteAddress;
+    const clientIP = getClientIP(req);
 
     const isBlocked = await Device.isIPBlocked(clientIP);
     if (isBlocked) {
@@ -135,9 +150,18 @@ app.use("/api", async (req, res, next) => {
   next();
 });
 
-// Body parser
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Body parser. The raw bytes are kept for the PayPlus webhook signature check.
+app.use(
+  express.json({
+    limit: "1mb",
+    verify: (req, res, buf) => {
+      if (req.originalUrl.startsWith("/api/payment/webhook")) {
+        req.rawBody = buf.toString("utf8");
+      }
+    },
+  }),
+);
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 // Normalize double-slash paths (PayPlus webhook URL had //api/... when BACKEND_URL ended with /)
 app.use((req, res, next) => {
@@ -159,7 +183,6 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/contact", contactRoutes);
 // app.use("/api/smtp", smtpRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/email", emailRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/newsletter", newsletterRoutes);
 app.use("/api/settings", settingsRoutes);
@@ -175,11 +198,14 @@ app.use("/api/admin", adminProductPageRoutes);
 app.use("/api/admin", adminPopupRoutes);
 app.use("/api/admin", adminLayoutRoutes);
 
-// Health check
+// Health check — reports the database too, so uptime monitors notice when
+// the API is up but cannot reach MongoDB.
 app.get("/api/health", (req, res) => {
-  res.json({
-    success: true,
-    message: "Shamayim VaAretz API is running",
+  const dbConnected = mongoose.connection.readyState === 1;
+  res.status(dbConnected ? 200 : 503).json({
+    success: dbConnected,
+    message: dbConnected ? "Shamayim VaAretz API is running" : "Database unavailable",
+    database: dbConnected ? "connected" : "disconnected",
     timestamp: new Date().toISOString(),
   });
 });
@@ -220,9 +246,23 @@ const server = app.listen(PORT, () => {
     `);
 });
 
+// Render stops instances with SIGTERM on every deploy. Finish in-flight
+// requests (checkouts, webhooks) before closing the DB connection.
+const shutdown = (signal) => {
+  console.log(`${signal} received — shutting down gracefully`);
+  server.close(async () => {
+    await mongoose.connection.close().catch(() => {});
+    process.exit(0);
+  });
+  // Hard stop if something hangs
+  setTimeout(() => process.exit(1), 10_000).unref();
+};
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
 // Handle unhandled promise rejections
-process.on("unhandledRejection", (err, promise) => {
-  console.log(`❌ Error: ${err.message}`);
+process.on("unhandledRejection", (err) => {
+  console.error(`❌ Unhandled rejection: ${err?.message || err}`);
   // Close server & exit process
   server.close(() => process.exit(1));
 });

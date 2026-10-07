@@ -29,7 +29,7 @@ export function buildDefaultBlocks() {
         showPrice: true,
         showOptions: true,
         showStock: true,
-        priceNote: 'כולל מע"מ ומשלוח',
+        priceNote: 'כולל מע"מ',
         ctaLabel: "לרכישה מאובטחת",
         reassuranceText: "תשלום מאובטח, ללא התחייבות, 14 יום להחזרה",
         footnote: "נוצר בעבודת יד בהזמנה אישית ונשלח תוך עד 14 ימי עסקים",
@@ -51,7 +51,7 @@ export function buildDefaultBlocks() {
           },
           {
             icon: "truck",
-            title: "משלוח חינם לכל הארץ",
+            title: "משלוח חינם מעל ₪300",
             text: "ללא עלות נוספת, בכל הזמנה ולכל יעד בישראל",
           },
           {
@@ -135,7 +135,7 @@ export function buildDefaultBlocks() {
       placement: "flow",
       visibility: { mobile: true, desktop: true },
       props: {
-        subheadline: "עבודת יד בהזמנה אישית, משלוח חינם לכל הארץ ו-14 יום להחזרה.",
+        subheadline: "עבודת יד בהזמנה אישית, משלוח חינם מעל ₪300 ו-14 יום להחזרה.",
         ctaLabel: "לרכישה מאובטחת",
         background: "navy",
       },

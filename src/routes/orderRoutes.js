@@ -2,18 +2,14 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import {
   getAllOrders,
-  createOrder,
   getOrderById,
   updateOrderStatus,
   updateOrderTracking,
   deleteOrder,
-  orderSuccess,
   verifyTransaction,
-  createFromPayment,
   getCouponStats,
   trackOrderByOrderId,
 } from "../controllers/orderController.js";
-import { generatePaymentLinkHandler } from "../controllers/paymentController.js";
 import { protect, admin, optionalProtect } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -30,28 +26,18 @@ const trackOrderLimiter = rateLimit({
   },
 });
 
-// Generate a PayPlus payment link — called by frontend before redirecting to payment page
-router.post("/create-payment", optionalProtect, generatePaymentLinkHandler);
-
-// Verify PayPlus payment server-side and save order — SECURITY: keeps API keys off the frontend
+// Confirms the payment with PayPlus server-side, then saves the order
 router.post("/verify-transaction", optionalProtect, verifyTransaction);
-
-// Save full order from frontend localStorage after PayPlus redirects back
-router.post("/create-from-payment", optionalProtect, createFromPayment);
-
-// Order success callback — called by frontend after payment gateway confirms payment
-router.post("/success", optionalProtect, orderSuccess);
 
 // Public order tracking (must be before /:id)
 router.get("/track/:orderId", trackOrderLimiter, trackOrderByOrderId);
 
 // Order management endpoints
-router.get("/", protect, admin, getAllOrders); // Admin only - view all orders
-router.get("/coupon-stats", protect, admin, getCouponStats); // Admin only - coupon usage stats
-router.post("/", protect, createOrder); // Any authenticated user can create order
-router.get("/:id", protect, getOrderById); // Get specific order
-router.put("/:id/status", protect, admin, updateOrderStatus); // Admin only - update status
-router.put("/:id/tracking", protect, admin, updateOrderTracking); // Admin only - set shipment tracking number
-router.delete("/:id", protect, admin, deleteOrder); // Admin only - delete order
+router.get("/", protect, admin, getAllOrders);
+router.get("/coupon-stats", protect, admin, getCouponStats);
+router.get("/:id", protect, getOrderById); // owner or admin (checked in controller)
+router.put("/:id/status", protect, admin, updateOrderStatus);
+router.put("/:id/tracking", protect, admin, updateOrderTracking);
+router.delete("/:id", protect, admin, deleteOrder);
 
 export default router;

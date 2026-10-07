@@ -279,50 +279,6 @@ export const createManualDocument = async (
     ...(transaction_uuid && { transaction_uuid }),
   };
 
-  // #region agent log
-  {
-    const itemsSum = payload.items.reduce(
-      (s, i) => s + Number(i.price) * Number(i.quantity),
-      0,
-    );
-    const paymentsSum = normalizedPayments.reduce(
-      (s, p) => s + Number(p.amount),
-      0,
-    );
-    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "390f6a",
-      },
-      body: JSON.stringify({
-        sessionId: "390f6a",
-        runId: "run1",
-        hypothesisId: "A,B,C,D,E",
-        location: "payPlusAPI.js:createManualDocument:payload",
-        message: "PayPlus invoice payload totals",
-        data: {
-          docType,
-          items: payload.items.map((i) => ({
-            price: i.price,
-            priceType: typeof i.price,
-            quantity: i.quantity,
-            quantityType: typeof i.quantity,
-            line: Number(i.price) * Number(i.quantity),
-          })),
-          itemsSum,
-          itemsSumRounded: Math.round(itemsSum * 100) / 100,
-          paymentsSum,
-          totalAmount: payload.totalAmount,
-          diffItemsVsTotal: itemsSum - payload.totalAmount,
-          diffPaymentsVsTotal: paymentsSum - payload.totalAmount,
-          vatType: payload.vatType,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-  }
-  // #endregion
 
   console.log(
     `📤 createManualDocument [${docType}] →`,
@@ -348,31 +304,6 @@ export const createManualDocument = async (
       JSON.stringify(detail),
     );
 
-    // #region agent log
-    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "390f6a",
-      },
-      body: JSON.stringify({
-        sessionId: "390f6a",
-        runId: "run1",
-        hypothesisId: "A,B,C,D,E",
-        location: "payPlusAPI.js:createManualDocument:error",
-        message: "PayPlus books rejected document",
-        data: {
-          docType,
-          httpStatus: error.response?.status ?? null,
-          detail,
-          sentTotalAmount: payload.totalAmount,
-          sentItems: payload.items,
-          sentPayments: payload.payments,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     throw new Error(
       error.response?.data?.results?.message ||
         error.response?.data?.message ||
@@ -389,57 +320,12 @@ export const createManualDocument = async (
  * @returns {Promise<Object>} Transaction details
  */
 export const getTransactionByPageRequestUid = async (pageRequestUid) => {
-  // #region agent log
-  fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "439f43",
-    },
-    body: JSON.stringify({
-      sessionId: "439f43",
-      hypothesisId: "B",
-      location: "payPlusAPI.js:getTransactionByPageRequestUid:entry",
-      message: "PayPlus transaction lookup start",
-      data: {
-        uidPrefix: String(pageRequestUid).slice(0, 8),
-        apiUrl: PAYPLUS_BASE_URL,
-        hasPublicKey: Boolean(process.env.PAYPLUS_PUBLIC_KEY),
-        hasSecretKey: Boolean(process.env.PAYPLUS_SECRET_KEY),
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
 
   try {
     const response = await payPlusAPI.post("/PaymentPages/ipn-full", {
       payment_request_uid: pageRequestUid,
     });
 
-    // #region agent log
-    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "439f43",
-      },
-      body: JSON.stringify({
-        sessionId: "439f43",
-        hypothesisId: "B",
-        location: "payPlusAPI.js:getTransactionByPageRequestUid:success",
-        message: "PayPlus ipn-full succeeded",
-        data: {
-          resultsStatus: response.data?.results?.status ?? null,
-          statusCode:
-            response.data?.data?.status_code ??
-            response.data?.transaction?.status_code ??
-            null,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
 
     return response.data;
   } catch (error) {
@@ -452,29 +338,18 @@ export const getTransactionByPageRequestUid = async (pageRequestUid) => {
       typeof detail === "object" ? JSON.stringify(detail) : detail,
     );
 
-    // #region agent log
-    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "439f43",
-      },
-      body: JSON.stringify({
-        sessionId: "439f43",
-        hypothesisId: "B",
-        location: "payPlusAPI.js:getTransactionByPageRequestUid:error",
-        message: "PayPlus ipn-full failed",
-        data: { httpStatus: status ?? null, detailType: typeof detail },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
 
     throw new Error("Failed to fetch transaction by page request UID");
   }
 };
 
-/** Whether a PayPlus ipn-full / redirect payload indicates an approved charge. */
+/**
+ * Whether a PayPlus ipn-full payload describes an approved charge.
+ *
+ * Only the transaction's own status_code counts ("000" = approved).
+ * `results.status === "success"` merely means the lookup call itself worked,
+ * so it must never be read as "paid".
+ */
 export const isPayPlusTransactionApproved = (payPlusResponse) => {
   const tx =
     payPlusResponse?.transaction ??
@@ -483,21 +358,7 @@ export const isPayPlusTransactionApproved = (payPlusResponse) => {
     {};
 
   const statusCode = tx.status_code ?? payPlusResponse?.data?.status_code ?? null;
-  const txStatus =
-    payPlusResponse?.results?.status ?? tx.status ?? payPlusResponse?.data?.status ?? null;
-
-  return (
-    statusCode === "000" ||
-    statusCode === 0 ||
-    statusCode === "0" ||
-    txStatus === 1 ||
-    txStatus === "1" ||
-    txStatus === "success" ||
-    txStatus === "approved" ||
-    tx.status === "approved" ||
-    tx.payment_status === "completed" ||
-    payPlusResponse?.data?.payment_status === "completed"
-  );
+  return String(statusCode) === "000";
 };
 
 /**

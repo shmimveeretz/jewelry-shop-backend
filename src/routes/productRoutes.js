@@ -8,7 +8,7 @@ import {
   addReview,
   setHomeFeaturedProducts,
 } from "../controllers/productController.js";
-import { protect, admin } from "../middleware/auth.js";
+import { protect, admin, optionalProtect } from "../middleware/auth.js";
 import { uploadSingle } from "../middleware/upload.js";
 
 const router = express.Router();
@@ -17,7 +17,7 @@ router.put("/home-featured", protect, admin, setHomeFeaturedProducts);
 
 router
   .route("/")
-  .get(getProducts)
+  .get(optionalProtect, getProducts) // staff may pass ?includeInactive=true
   .post(protect, admin, uploadSingle, createProduct);
 
 router

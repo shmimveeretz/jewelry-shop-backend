@@ -1,7 +1,5 @@
 import Order from "../models/Order.js";
 import OrderMongo from "../models/OrderMongo.js";
-import UserMongo from "../models/UserMongo.js";
-import ProductMongo from "../models/ProductMongo.js";
 import {
   getTransactionByPageRequestUid,
   isPayPlusTransactionApproved,
@@ -12,43 +10,20 @@ import {
   sendOrderTrackingUpdate,
   ensureOrderEmailsSent,
 } from "../utils/emailService.js";
-import PendingOrderMongo from "../models/PendingOrderMongo.js";
-import {
-  normalizeExtraHebrewLetters,
-  isValidHebrewLetter,
-  getExtraLetterPerBraceletCost,
-  formatItemNameWithExtraLetters,
-  allowsExtraLettersPricing,
-  MAX_EXTRA_LETTERS,
-} from "../utils/extraHebrewLetters.js";
+import { saveVerifiedOrder } from "../utils/paidOrder.js";
+import { canViewOrder } from "./paymentController.js";
 
-
-function resolvePaymentPageRequestUid(body = {}) {
-  return (
-    body.paymentPageRequestUid ||
-    body.transactionUid ||
-    body.page_request_uid ||
-    body.pageRequestUid ||
-    null
-  );
-}
-
-function resolveOrderDataFromBody(body = {}) {
-  if (body.orderData && typeof body.orderData === "object") {
-    return body.orderData;
-  }
-
-  const {
-    paymentPageRequestUid: _a,
-    transactionUid: _b,
-    page_request_uid: _c,
-    pageRequestUid: _d,
-    orderData: _e,
-    ...orderFields
-  } = body;
-
-  return orderFields;
-}
+const orderSummary = (order, message) => ({
+  success: true,
+  message,
+  data: order,
+  orderId: order.orderId || order._id?.toString(),
+  amount: order.totalPrice,
+  customerName: order.customerName,
+  email: order.customerEmail,
+  shippingAddress: order.shippingAddress,
+  items: order.items,
+});
 
 // @desc    Get all orders
 // @route   GET /api/orders
@@ -81,72 +56,9 @@ export const getAllOrders = async (req, res) => {
   }
 };
 
-// @desc    Create new order
-// @route   POST /api/orders
-// @access  Private
-export const createOrder = async (req, res) => {
-  try {
-    const {
-      orderId,
-      customerName,
-      email,
-      items,
-      totalPrice,
-      shippingAddress,
-      paymentMethod,
-      notes,
-    } = req.body;
-    const userId = req.user.id;
-
-    console.log("📦 Create Order Request:");
-    console.log("📝 Order ID:", orderId);
-    console.log("👤 Customer:", customerName);
-
-    if (
-      !orderId ||
-      !customerName ||
-      !email ||
-      !items ||
-      items.length === 0 ||
-      !totalPrice
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "כל השדות החובה נדרשים",
-      });
-    }
-
-    const newOrder = await Order.create({
-      orderId,
-      userId,
-      customerName,
-      email,
-      items,
-      totalPrice,
-      shippingAddress,
-      paymentMethod,
-      notes,
-    });
-
-    console.log("✅ Order created:", orderId);
-
-    res.status(201).json({
-      success: true,
-      message: "הזמנה נוצרה בהצלחה",
-      data: newOrder,
-    });
-  } catch (error) {
-    console.error("❌ Error creating order:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
 // @desc    Get order by ID
 // @route   GET /api/orders/:id
-// @access  Private
+// @access  Private (owner or admin)
 export const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -158,6 +70,13 @@ export const getOrderById = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "הזמנה לא נמצאה",
+      });
+    }
+
+    if (!canViewOrder(order, req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "אין לך הרשאה לצפות בהזמנה זו",
       });
     }
 
@@ -390,142 +309,6 @@ export const updateOrderTracking = async (req, res) => {
   }
 };
 
-// @desc    Handle successful payment — save order + link to user
-// @route   POST /api/orders/success
-// @access  Public (optionalProtect — works for guests too)
-export const orderSuccess = async (req, res) => {
-  try {
-    const {
-      // Payment gateway fields
-      paymentTransactionId,
-      transactionUid,
-      // Customer info
-      customerName,
-      customerEmail,
-      customerPhone,
-      // Items
-      items,
-      // Pricing
-      totalAmount,
-      totalPrice,
-      itemsPrice,
-      shippingPrice,
-      discountPercent,
-      couponCode,
-      // Shipping
-      shippingAddress,
-    } = req.body;
-
-    const resolvedTransactionUid =
-      transactionUid || paymentTransactionId || null;
-    const resolvedTotal = totalPrice ?? totalAmount;
-
-    if (!customerName || !customerEmail) {
-      return res.status(400).json({
-        success: false,
-        message: "customerName ו-customerEmail הם שדות חובה",
-      });
-    }
-    if (!Array.isArray(items) || items.length === 0) {
-      return res
-        .status(400)
-        .json({ success: false, message: "items הוא שדה חובה" });
-    }
-    if (resolvedTotal == null || isNaN(Number(resolvedTotal))) {
-      return res
-        .status(400)
-        .json({ success: false, message: "totalAmount הוא שדה חובה" });
-    }
-
-    // Idempotency — avoid saving the same transaction twice
-    if (resolvedTransactionUid) {
-      const existing = await OrderMongo.findOne({
-        transactionUid: resolvedTransactionUid,
-      });
-      if (existing) {
-        return res.json({
-          success: true,
-          data: existing,
-          message: "הזמנה כבר קיימת במערכת",
-        });
-      }
-    }
-
-    const orderData = {
-      customerName,
-      customerEmail,
-      customerPhone: customerPhone || "",
-      items: items.map((item) => {
-        const selections = item.selections || {};
-        const extraLetters = Array.isArray(selections.extraLetters)
-          ? selections.extraLetters
-          : Array.isArray(item.selectedOptions?.extraLetters)
-            ? item.selectedOptions.extraLetters
-            : [];
-        return {
-          productId: item.productId || item.id || "",
-          name: formatItemNameWithExtraLetters(item.name, extraLetters),
-          price: Number(item.price),
-          quantity: item.quantity ?? 1,
-          selectedOptions: item.selectedOptions || {},
-          selections: {
-            metalType: selections.metalType || item.selectedOptions?.metalType || "",
-            length: selections.length || item.selectedOptions?.length || "",
-            jewelryType:
-              selections.jewelryType || item.selectedOptions?.jewelryType || "",
-            extraLetters,
-          },
-        };
-      }),
-      shippingAddress: {
-        fullName:
-          shippingAddress?.fullName || shippingAddress?.name || customerName,
-        address: shippingAddress?.address || shippingAddress?.street || "",
-        city: shippingAddress?.city || "",
-        zipCode: shippingAddress?.zipCode || "",
-      },
-      itemsPrice: Number(itemsPrice) || 0,
-      shippingPrice: Number(shippingPrice) || 0,
-      totalPrice: Number(resolvedTotal),
-      couponCode: couponCode || null,
-      discountPercent: Number(discountPercent) || 0,
-      paymentStatus: "completed",
-      transactionUid: resolvedTransactionUid,
-      status: "Pending",
-    };
-
-    // Link to authenticated user when logged in
-    if (req.user?.id) {
-      orderData.userId = req.user.id;
-    }
-
-    const saved = await OrderMongo.create(orderData);
-
-    // Attach order reference to user document if authenticated
-    if (req.user?.id) {
-      await UserMongo.findByIdAndUpdate(req.user.id, {
-        $push: { orders: saved._id },
-        updatedAt: Date.now(),
-      });
-    }
-
-    console.log(
-      `✅ Order saved via /success — id: ${saved._id}, tx: ${resolvedTransactionUid || "N/A"}, user: ${
-        req.user?.id || "guest"
-      }`,
-    );
-
-    return res.status(200).json({
-      success: true,
-      message: "ההזמנה נשמרה בהצלחה",
-      data: saved,
-    });
-  } catch (error) {
-    console.error("❌ orderSuccess Error:", error.message);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
 // @desc    Delete order
 // @route   DELETE /api/orders/:id
 // @access  Private/Admin
@@ -561,286 +344,86 @@ export const deleteOrder = async (req, res) => {
 // @desc    Verify a PayPlus payment server-side and save the order
 // @route   POST /api/orders/verify-transaction
 // @access  Public (optionalProtect — supports guests)
+//
+// Called by the success page after PayPlus redirects back. The payment is
+// confirmed with PayPlus directly; order contents come from the server-side
+// PendingOrder, so nothing in the request body can change what is saved.
 export const verifyTransaction = async (req, res) => {
   try {
-    const paymentPageRequestUid = resolvePaymentPageRequestUid(req.body);
-    const orderDataFromBody = resolveOrderDataFromBody(req.body);
+    const body = req.body || {};
+    const pageRequestUid =
+      body.paymentPageRequestUid || body.page_request_uid || body.transactionUid || null;
 
-    if (!paymentPageRequestUid) {
+    if (typeof pageRequestUid !== "string" || !pageRequestUid || pageRequestUid.length > 100) {
       return res.status(400).json({
         success: false,
         message: "paymentPageRequestUid הוא שדה חובה",
       });
     }
 
-    // Idempotency — avoid saving the same transaction twice (still ensure emails)
-    const existing = await OrderMongo.findOne({
-      transactionUid: paymentPageRequestUid,
-    });
+    const existing = await OrderMongo.findOne({ transactionUid: pageRequestUid });
     if (existing) {
       ensureOrderEmailsSent(existing).catch((err) =>
-        console.error(
-          "❌ Order email error (verifyTransaction existing):",
-          err.message,
-        ),
+        console.error("❌ Order email error (verifyTransaction existing):", err.message),
       );
-      return res.json({
-        success: true,
-        data: existing,
-        orderId: existing.orderId || existing._id?.toString(),
-        amount: existing.totalPrice,
-        customerName: existing.customerName,
-        email: existing.customerEmail,
-        shippingAddress: existing.shippingAddress,
-        items: existing.items,
-        message: "הזמנה כבר קיימת במערכת",
-      });
+      return res.json(orderSummary(existing, "הזמנה כבר קיימת במערכת"));
     }
 
-    // Prefer PendingOrder (saved before PayPlus redirect) over sparse body data
-    const pendingDoc = await PendingOrderMongo.findOne({
-      pageRequestUid: paymentPageRequestUid,
-    });
-    const pendingOrderData = pendingDoc?.orderData ?? {};
-
-    // Verify the payment server-side with PayPlus
-    console.log("🔍 Verifying transaction:", paymentPageRequestUid);
-    // #region agent log
-    fetch("http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "439f43",
-      },
-      body: JSON.stringify({
-        sessionId: "439f43",
-        hypothesisId: "C",
-        location: "orderController.js:verifyTransaction:before-payplus",
-        message: "verifyTransaction starting PayPlus lookup",
-        data: { uidPrefix: String(paymentPageRequestUid).slice(0, 8) },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    const payPlusResponse = await getTransactionByPageRequestUid(
-      paymentPageRequestUid,
-    );
-
-    const isApproved = isPayPlusTransactionApproved(payPlusResponse);
-
-    if (!isApproved) {
-      console.warn("⚠️ PayPlus transaction not approved:", payPlusResponse);
+    const payPlusResponse = await getTransactionByPageRequestUid(pageRequestUid);
+    if (!isPayPlusTransactionApproved(payPlusResponse)) {
+      console.warn("⚠️ PayPlus transaction not approved:", pageRequestUid);
       return res.status(402).json({
         success: false,
         message: "התשלום לא אושר על ידי PayPlus",
-        details: payPlusResponse?.results ?? payPlusResponse,
       });
     }
 
-    // Build order from PendingOrder + PayPlus data + optional orderData from frontend
     const txData =
       payPlusResponse?.transaction ??
       payPlusResponse?.data?.transaction ??
       payPlusResponse?.data ??
       {};
-    const orderData = {
-      ...pendingOrderData,
-      ...(orderDataFromBody ?? {}),
-    };
 
-    const customerName =
-      orderData.customerName ||
-      txData.customer_name ||
-      txData.full_name ||
-      "לקוח";
-    const customerEmail =
-      orderData.customerEmail || txData.email || txData.customer_email || "";
-    const customerPhone =
-      orderData.customerPhone || txData.phone || txData.customer_phone || "";
-    const totalPrice =
-      orderData.totalPrice ??
-      orderData.totalAmount ??
-      Number(txData.amount) ??
-      0;
-
-    const items = (
-      orderData.items ??
-      (txData.items || []).map((i) => ({
-        productId: i.product_uid || "",
-        name: i.name,
-        price: Number(i.price),
-        quantity: Number(i.quantity) || 1,
-        selectedOptions: {},
-        selections: {},
-      }))
-    ).map((item) => {
-      const selections = item.selections || {};
-      const extraLetters = Array.isArray(selections.extraLetters)
-        ? selections.extraLetters
-        : Array.isArray(item.selectedOptions?.extraLetters)
-          ? item.selectedOptions.extraLetters
-          : [];
-      return {
-        productId: item.productId || item.id || "",
-        name: formatItemNameWithExtraLetters(item.name, extraLetters),
-        price: Number(item.price),
-        quantity: item.quantity ?? 1,
-        selectedOptions: item.selectedOptions || {},
-        selections: {
-          metalType: selections.metalType || "",
-          length: selections.length || "",
-          jewelryType: selections.jewelryType || "",
-          extraLetters,
-        },
-      };
+    const { order, created } = await saveVerifiedOrder({
+      pageRequestUid,
+      txData,
+      userId: req.user?.id || null,
     });
 
-    const publicOrderId =
-      orderData.orderId ||
-      txData.more_info ||
-      paymentPageRequestUid;
-
-    const newOrder = await OrderMongo.create({
-      customerName,
-      customerEmail,
-      customerPhone,
-      items,
-      shippingAddress: {
-        fullName:
-          orderData.shippingAddress?.fullName ||
-          orderData.shippingAddress?.name ||
-          customerName,
-        address:
-          orderData.shippingAddress?.address ||
-          orderData.shippingAddress?.street ||
-          "",
-        city: orderData.shippingAddress?.city || "",
-        zipCode: orderData.shippingAddress?.zipCode || "",
-      },
-      itemsPrice: Number(orderData.itemsPrice) || 0,
-      shippingPrice: Number(orderData.shippingPrice) || 0,
-      totalPrice: Number(totalPrice),
-      couponCode: orderData.couponCode || null,
-      discountPercent: Number(orderData.discountPercent) || 0,
-      paymentStatus: "completed",
-      transactionUid: paymentPageRequestUid,
-      orderId: publicOrderId,
-      status: "Pending",
-      ...(req.user?.id && { userId: req.user.id }),
-    });
-
-    // Clean up pending order (best-effort)
-    pendingDoc?.deleteOne().catch(() => {});
-
-    // Link order to authenticated user
-    if (req.user?.id) {
-      await UserMongo.findByIdAndUpdate(req.user.id, {
-        $push: { orders: newOrder._id },
-        updatedAt: Date.now(),
-      });
-    }
-
-    // Auto-generate tax receipt via PayPlus Books (non-blocking)
-    if (items.length > 0 && totalPrice > 0) {
-      const today = new Date().toISOString().slice(0, 10);
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7344/ingest/04171ffe-b9c7-4a68-aa80-feae36360d3e",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "390f6a",
-          },
-          body: JSON.stringify({
-            sessionId: "390f6a",
-            runId: "run1",
-            hypothesisId: "A,B,C,E",
-            location: "orderController.js:verifyTransaction:before-invoice",
-            message: "Order totals before invoice creation",
-            data: {
-              itemsSum: items.reduce(
-                (s, i) => s + Number(i.price) * Number(i.quantity ?? 1),
-                0,
-              ),
-              items: items.map((i) => ({
-                price: i.price,
-                priceType: typeof i.price,
-                quantity: i.quantity,
-                extraLetters: (i.selections?.extraLetters || []).length,
-              })),
-              totalPrice,
-              totalPriceType: typeof totalPrice,
-              orderDataTotalPrice: orderData.totalPrice ?? null,
-              orderDataTotalAmount: orderData.totalAmount ?? null,
-              orderDataItemsPrice: orderData.itemsPrice ?? null,
-              orderDataShippingPrice: orderData.shippingPrice ?? null,
-              couponCode: orderData.couponCode ?? null,
-              discountPercent: orderData.discountPercent ?? null,
-              txAmount: txData.amount ?? null,
-              usedPendingOrder: Boolean(pendingDoc),
-            },
-            timestamp: Date.now(),
-          }),
-        },
-      ).catch(() => {});
-      // #endregion
+    // Fiscal document for this sale (non-blocking). Skipped when the webhook
+    // already created the order, since that path owns the document then.
+    if (created && order.items.length > 0 && order.totalPrice > 0) {
       createManualDocument("inv_tax_receipt", {
         customer: {
-          name: customerName,
-          email: customerEmail,
-          phone: customerPhone,
+          name: order.customerName,
+          email: order.customerEmail,
+          phone: order.customerPhone,
         },
-        items: items.map((i) => ({
+        items: order.items.map((i) => ({
           name: i.name,
           quantity: i.quantity ?? 1,
           price: i.price,
         })),
-        payments: [{ paymentMethod: 4, sum: Number(totalPrice) }],
-        totalAmount: Number(totalPrice),
+        payments: [{ paymentMethod: 4, sum: Number(order.totalPrice) }],
+        totalAmount: Number(order.totalPrice),
         currency_code: "ILS",
         vatType: "vat-type-included",
         language: "he",
-        doc_date: today,
-        sendEmail: !!customerEmail,
+        doc_date: new Date().toISOString().slice(0, 10),
+        sendEmail: Boolean(order.customerEmail),
       }).catch((err) =>
-        console.error(
-          "❌ Auto-invoice error (verifyTransaction):",
-          err.message,
-        ),
+        console.error("❌ Auto-invoice error (verifyTransaction):", err.message),
       );
     }
 
-    console.log(
-      `✅ Transaction verified & order saved — id: ${newOrder._id}, orderId: ${publicOrderId}, uid: ${paymentPageRequestUid}`,
+    ensureOrderEmailsSent(order).catch((err) =>
+      console.error("❌ Order email error (verifyTransaction):", err.message),
     );
 
-    // Customer thank-you + admin notification (idempotent across webhook race)
-    ensureOrderEmailsSent(newOrder, {
-      customerEmail,
-      customerPhone,
-      customerName,
-    }).catch((err) =>
-      console.error(
-        "❌ Order email error (verifyTransaction):",
-        err.message,
-      ),
-    );
-
-    return res.status(200).json({
-      success: true,
-      message: "התשלום אומת וההזמנה נשמרה בהצלחה",
-      data: newOrder,
-      orderId: publicOrderId,
-      amount: newOrder.totalPrice,
-      customerName,
-      email: customerEmail,
-      shippingAddress: newOrder.shippingAddress,
-      items: newOrder.items,
-    });
+    return res.json(orderSummary(order, "התשלום אומת וההזמנה נשמרה בהצלחה"));
   } catch (error) {
     console.error("❌ verifyTransaction Error:", error.message);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "שגיאה באימות התשלום" });
   }
 };
 
@@ -877,154 +460,6 @@ export const getCouponStats = async (req, res) => {
     res.json({ success: true, data: stats });
   } catch (error) {
     console.error("❌ Error fetching coupon stats:", error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// @desc    Save full order from frontend localStorage after successful payment
-// @route   POST /api/orders/create-from-payment
-// @access  Public (optionalProtect — supports guests)
-export const createFromPayment = async (req, res) => {
-  try {
-    const { transactionUid } = req.body;
-
-    if (!transactionUid) {
-      return res.status(400).json({
-        success: false,
-        message: "transactionUid הוא שדה חובה",
-      });
-    }
-
-    // Idempotency — don't save the same transaction twice
-    const existing = await OrderMongo.findOne({ transactionUid });
-    if (existing) {
-      return res.json({
-        success: true,
-        data: existing,
-        message: "הזמנה כבר קיימת במערכת",
-      });
-    }
-
-    const order = await Order.createFromPayment(req.body, transactionUid);
-
-    console.log(
-      `✅ createFromPayment: order saved — id: ${order._id ?? order.id}, uid: ${transactionUid}`,
-    );
-
-    return res.status(201).json({ success: true, data: order });
-  } catch (error) {
-    console.error("❌ createFromPayment Error:", error.message);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-/**
- * @desc    Validate a single cart item and calculate its price server-side.
- *          Frontend prices are NEVER trusted — we re-compute from the DB.
- * @route   POST /api/orders/cart/add
- * @access  Public
- *
- * Expected body:
- * {
- *   "productId": "aleph",
- *   "quantity": 1,
- *   "selections": {
- *     "metalType": "זהב 14 קראט",
- *     "length": "45",
- *     "jewelryType": "צמיד",
- *     "extraLetters": ["ב", "ג", "ד"]
- *   }
- * }
- */
-export const addToCart = async (req, res) => {
-  try {
-    const { productId, quantity = 1, selections = {} } = req.body;
-
-    // ── Input validation ────────────────────────────────────────────────────
-    if (!productId || typeof productId !== "string") {
-      return res
-        .status(400)
-        .json({ success: false, message: "productId הוא שדה חובה" });
-    }
-
-    const parsedQty = Number(quantity);
-    if (!Number.isInteger(parsedQty) || parsedQty < 1) {
-      return res.status(400).json({
-        success: false,
-        message: "quantity חייב להיות מספר שלם חיובי",
-      });
-    }
-
-    // ── Fetch product from DB ────────────────────────────────────────────────
-    const product = await ProductMongo.findOne({ id: productId });
-    if (!product) {
-      return res.status(404).json({ success: false, message: "מוצר לא נמצא" });
-    }
-
-    const {
-      metalType = "",
-      length = "",
-      jewelryType = "",
-      extraLetters = [],
-    } = selections;
-
-    if (!Array.isArray(extraLetters)) {
-      return res.status(400).json({
-        success: false,
-        message: "extraLetters חייב להיות מערך",
-      });
-    }
-
-    const normalizedExtraLetters = normalizeExtraHebrewLetters(extraLetters);
-
-    // ── Validate Hebrew letters ──────────────────────────────────────────────
-    const invalidLetters = normalizedExtraLetters.filter(
-      (l) => !isValidHebrewLetter(l),
-    );
-    if (invalidLetters.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `extraLetters מכיל תווים לא חוקיים: "${invalidLetters.join('", "')}". ניתן להשתמש באותיות עבריות בלבד (א–ת)`,
-      });
-    }
-
-    // ── Server-side price calculation ────────────────────────────────────────
-    const basePrice = product.price ?? 0;
-    const metalAddition = product.priceAdditions?.metalType?.[metalType] ?? 0;
-
-    let extraLettersCost = 0;
-    let sanitizedExtraLetters = [];
-
-    if (allowsExtraLettersPricing(product, jewelryType)) {
-      sanitizedExtraLetters = normalizedExtraLetters.slice(0, MAX_EXTRA_LETTERS);
-      const perLetterCost = getExtraLetterPerBraceletCost(
-        product.priceAdditions,
-        metalType,
-      );
-      extraLettersCost = sanitizedExtraLetters.length * perLetterCost;
-    }
-
-    const unitPrice = basePrice + metalAddition + extraLettersCost;
-
-    const cartItem = {
-      productId: product.id,
-      name: formatItemNameWithExtraLetters(product.name, sanitizedExtraLetters),
-      price: unitPrice,
-      quantity: parsedQty,
-      selections: {
-        metalType,
-        length,
-        jewelryType,
-        extraLetters: sanitizedExtraLetters,
-      },
-    };
-
-    console.log(
-      `🛒 addToCart: ${product.name} — unit price: ${unitPrice} ILS (base ${basePrice} + metal ${metalAddition} + letters ${extraLettersCost})`,
-    );
-
-    return res.status(200).json({ success: true, data: cartItem });
-  } catch (error) {
-    console.error("❌ addToCart Error:", error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };

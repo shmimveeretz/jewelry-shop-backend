@@ -1,5 +1,5 @@
 import { sendEmail } from "../utils/emailService.js";
-import { buildAdminEmailLayout, buildEmailLayout, emailButton, emailDivider, emailGreeting, emailInfoBox, emailParagraph, emailSectionTitle, getFrontendUrl } from "../utils/emailTemplates.js";
+import { escapeDeep, buildAdminEmailLayout, buildEmailLayout, emailButton, emailDivider, emailGreeting, emailInfoBox, emailParagraph, emailSectionTitle, getFrontendUrl } from "../utils/emailTemplates.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -7,18 +7,34 @@ dotenv.config();
 // Send contact form email
 export const sendContactEmail = async (req, res) => {
   try {
-    const { name, email, phone, subject, message } = req.body;
+    const { email } = req.body;
+    const fields = ["name", "phone", "subject", "message"].map((key) =>
+      typeof req.body[key] === "string" ? req.body[key].trim() : "",
+    );
 
     // Validation
-    if (!name || !email || !message) {
+    if (!fields[0] || typeof email !== "string" || !email || !fields[3]) {
       return res.status(400).json({
         success: false,
         message: "אנא מלא את כל השדות הנדרשים",
       });
     }
 
+    const LIMITS = [120, 30, 200, 5000];
+    if (fields.some((value, i) => value.length > LIMITS[i]) || email.length > 200) {
+      return res.status(400).json({
+        success: false,
+        message: "אחד השדות ארוך מדי",
+      });
+    }
+
+    // Everything below lands in HTML emails, one of which goes to the address
+    // the visitor typed, so it is escaped to keep the form from being used to
+    // send arbitrary branded HTML.
+    const [name, phone, subject, message] = escapeDeep(fields);
+
     // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^\s@<>"'&]+@[^\s@<>"'&]+\.[^\s@<>"'&]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({
         success: false,

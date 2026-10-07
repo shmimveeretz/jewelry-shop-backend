@@ -28,7 +28,24 @@ const checkAdminOrROI = (req, res, next) => {
 // @access  Public
 router.post("/devices/track", async (req, res) => {
   try {
-    const { location, deviceName, browser, os, screen, language } = req.body;
+    // Public endpoint: keep only short strings so visitors cannot stuff the
+    // admin device list with arbitrary data.
+    const clamp = (value) => (typeof value === "string" ? value.slice(0, 200) : undefined);
+    const { deviceName, browser, os, screen, language } = Object.fromEntries(
+      ["deviceName", "browser", "os", "screen", "language"].map((key) => [
+        key,
+        clamp(req.body?.[key]),
+      ]),
+    );
+    const rawLocation = req.body?.location;
+    const location =
+      rawLocation && typeof rawLocation === "object"
+        ? {
+            city: clamp(rawLocation.city),
+            country: clamp(rawLocation.country),
+            timezone: clamp(rawLocation.timezone),
+          }
+        : undefined;
     const ipAddress = getClientIP(req);
 
     if (!ipAddress || ipAddress === "UNKNOWN") {
@@ -38,7 +55,7 @@ router.post("/devices/track", async (req, res) => {
       });
     }
 
-    const device = await Device.track({
+    await Device.track({
       ipAddress,
       location,
       deviceName,
@@ -48,10 +65,11 @@ router.post("/devices/track", async (req, res) => {
       language,
     });
 
-    res.json({ success: true, data: device });
+    // The stored record (IP, linked user, block flag) is admin data.
+    res.json({ success: true });
   } catch (error) {
     console.error("❌ Error tracking device:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "שגיאת שרת" });
   }
 });
 
@@ -372,9 +390,12 @@ router.get("/stats", protect, checkAdminOrROI, async (req, res) => {
       ProductMongo.find({}).select("category"),
     ]);
 
+    // Cancelled orders are refunded/never fulfilled: not revenue
     const sumRevenue = (orders) =>
       Math.round(
-        orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0) * 100,
+        orders
+          .filter((o) => o.status !== "Cancelled")
+          .reduce((sum, o) => sum + (o.totalPrice || 0), 0) * 100,
       ) / 100;
 
     const currentRevenue = sumRevenue(currentOrders);

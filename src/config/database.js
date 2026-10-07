@@ -34,12 +34,8 @@ const connectDB = async () => {
       console.log("⚠️  MongoDB disconnected");
     });
 
-    // Graceful shutdown
-    process.on("SIGINT", async () => {
-      await mongoose.connection.close();
-      console.log("MongoDB connection closed through app termination");
-      process.exit(0);
-    });
+    // Shutdown (closing this connection) is handled in server.js so the
+    // HTTP server can drain in-flight requests first.
 
     return conn;
   } catch (error) {
