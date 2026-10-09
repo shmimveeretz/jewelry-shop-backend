@@ -40,7 +40,9 @@ const UserSchema = new mongoose.Schema(
     ],
     isSubscribedToNewsletter: {
       type: Boolean,
-      default: true,
+      // Marketing email needs an explicit opt-in (Israeli anti-spam law,
+      // GDPR); a request that omits the field must not subscribe anyone.
+      default: false,
     },
     verificationCode: {
       type: String,

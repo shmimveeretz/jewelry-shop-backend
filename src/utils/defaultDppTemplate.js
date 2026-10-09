@@ -31,7 +31,7 @@ export function buildDefaultBlocks() {
         showStock: true,
         priceNote: 'כולל מע"מ',
         ctaLabel: "לרכישה מאובטחת",
-        reassuranceText: "תשלום מאובטח, ללא התחייבות, 14 יום להחזרה",
+        reassuranceText: "תשלום מאובטח · אחריות 12 חודשים · 14 יום להחזרה",
         footnote: "נוצר בעבודת יד בהזמנה אישית ונשלח תוך עד 14 ימי עסקים",
         lowStockThreshold: 5,
       },
@@ -62,7 +62,7 @@ export function buildDefaultBlocks() {
           {
             icon: "rotateCcw",
             title: "14 יום להחזרה",
-            text: "לא התאהבתם? מחזירים או מחליפים בלי כאב ראש",
+            text: "לא התאהבתם? אפשר להחזיר או להחליף תוך 14 יום מקבלת המשלוח",
           },
         ],
       },
