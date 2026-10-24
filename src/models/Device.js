@@ -93,79 +93,10 @@ class DeviceModel {
     }
   }
 
-  async blockIP(id, blocked) {
-    try {
-      const target = await this.Model.findById(id);
-      if (!target) return null;
-
-      const ipAddress = normalizeIP(target.ipAddress);
-      await this.Model.updateMany(
-        { ipAddress },
-        { blocked, updatedAt: new Date() },
-      );
-
-      const device = await this.Model.findById(id).populate(
-        "userId",
-        "firstName lastName email",
-      );
-
-      return this.formatDevice(device);
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async blockByIPAddress(ipAddress, blocked) {
-    try {
-      const normalizedIP = normalizeIP(ipAddress);
-      if (!normalizedIP) return null;
-
-      const updateResult = await this.Model.updateMany(
-        { ipAddress: normalizedIP },
-        { blocked, updatedAt: new Date() },
-      );
-
-      if (updateResult.matchedCount === 0 && blocked) {
-        const created = await this.Model.create({
-          ipAddress: normalizedIP,
-          blocked: true,
-          loginCount: 0,
-          firstLogin: new Date(),
-          lastLogin: new Date(),
-        });
-        return this.formatDevice(created);
-      }
-
-      const device = await this.Model.findOne({ ipAddress: normalizedIP }).sort({
-        blocked: -1,
-        lastLogin: -1,
-      });
-
-      return device ? this.formatDevice(device) : null;
-    } catch (error) {
-      throw error;
-    }
-  }
-
   async delete(id) {
     try {
       const result = await this.Model.findByIdAndDelete(id);
       return result ? true : false;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async isIPBlocked(ipAddress) {
-    try {
-      const normalized = normalizeIP(ipAddress);
-      if (!normalized) return false;
-
-      const device = await this.Model.findOne({
-        ipAddress: normalized,
-        blocked: true,
-      });
-      return Boolean(device);
     } catch (error) {
       throw error;
     }
@@ -261,7 +192,6 @@ class DeviceModel {
       screen: device.screen,
       language: device.language,
       location: device.location,
-      blocked: device.blocked,
       loginCount: device.loginCount,
       lastLogin: device.lastLogin,
       firstLogin: device.firstLogin,

@@ -24,11 +24,6 @@ const DeviceSchema = new mongoose.Schema(
       longitude: Number,
       timezone: String,
     },
-    blocked: {
-      type: Boolean,
-      default: false,
-      index: true,
-    },
     loginCount: {
       type: Number,
       default: 1,

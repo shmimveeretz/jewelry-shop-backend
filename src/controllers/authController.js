@@ -184,16 +184,6 @@ export const login = async (req, res) => {
     console.log("IP:", clientIP);
     console.log("Device:", deviceName);
 
-    // Check if IP is blocked
-    const isBlocked = await Device.isIPBlocked(clientIP);
-    if (isBlocked) {
-      console.log("🚫 Login attempt from blocked IP:", clientIP);
-      return res.status(403).json({
-        success: false,
-        message: "כתובת IP זו נחסמה. אנא פנה לתמיכה",
-      });
-    }
-
     // Check if device exists or create new one
     let device = await Device.findByUserAndIP(user.id, clientIP);
     if (device) {

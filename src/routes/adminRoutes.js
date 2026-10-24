@@ -78,15 +78,14 @@ router.post("/devices/track", async (req, res) => {
 // @access  Private/Admin/ROI
 router.get("/devices", protect, checkAdminOrROI, async (req, res) => {
   try {
-    const { userId, ipAddress, blocked, page = 1, limit = 50 } = req.query;
+    const { userId, ipAddress, page = 1, limit = 50 } = req.query;
 
     console.log("📱 Get All Devices Request:");
-    console.log("Filters:", { userId, ipAddress, blocked });
+    console.log("Filters:", { userId, ipAddress });
 
     const filter = {};
     if (userId) filter.userId = userId;
     if (ipAddress) filter.ipAddress = ipAddress;
-    if (blocked !== undefined) filter.blocked = blocked === "true";
 
     const devices = await Device.findAll(filter);
     const paginatedDevices = devices.slice((page - 1) * limit, page * limit);
@@ -136,112 +135,6 @@ router.get(
       });
     } catch (error) {
       console.error("❌ Error getting user devices:", error);
-      res.status(500).json({
-        success: false,
-        message: error.message,
-      });
-    }
-  },
-);
-
-// @desc    Block device/IP
-// @route   PUT /api/admin/devices/:id/block
-// @access  Private/Admin/ROI
-router.put("/devices/:id/block", protect, checkAdminOrROI, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { blocked } = req.body;
-
-    console.log("🚫 Block Device Request:");
-    console.log("Device ID:", id);
-    console.log("Blocked:", blocked);
-
-    if (typeof blocked !== "boolean") {
-      return res.status(400).json({
-        success: false,
-        message: "blocked חייב להיות true או false",
-      });
-    }
-
-    const device = await Device.blockIP(id, blocked);
-
-    if (!device) {
-      return res.status(404).json({
-        success: false,
-        message: "התקן לא נמצא",
-      });
-    }
-
-    console.log(blocked ? "🔒 Device blocked" : "🔓 Device unblocked");
-
-    res.json({
-      success: true,
-      message: blocked ? "התקן נחסם בהצלחה" : "התקן הופעל בהצלחה",
-      data: device,
-    });
-  } catch (error) {
-    console.error("❌ Error blocking device:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
-
-// @desc    Block all devices for an IP address
-// @route   PUT /api/admin/devices/ip/:ipAddress/block
-// @access  Private/Admin/ROI
-router.put(
-  "/devices/ip/:ipAddress/block",
-  protect,
-  checkAdminOrROI,
-  async (req, res) => {
-    try {
-      const { ipAddress } = req.params;
-      const { blocked } = req.body;
-
-      console.log("🚫 Block IP Address Request:");
-      console.log("IP Address:", ipAddress);
-      console.log("Blocked:", blocked);
-
-      if (typeof blocked !== "boolean") {
-        return res.status(400).json({
-          success: false,
-          message: "blocked חייב להיות true או false",
-        });
-      }
-
-      const normalizedIP = normalizeIP(decodeURIComponent(ipAddress));
-      if (!normalizedIP) {
-        return res.status(400).json({
-          success: false,
-          message: "כתובת IP לא תקינה",
-        });
-      }
-
-      const blockedDevice = await Device.blockByIPAddress(normalizedIP, blocked);
-      if (!blockedDevice) {
-        return res.status(404).json({
-          success: false,
-          message: "לא ניתן לעדכן חסימה עבור כתובת IP זו",
-        });
-      }
-
-      console.log(
-        blocked
-          ? `🔒 Blocked IP ${normalizedIP}`
-          : `🔓 Unblocked IP ${normalizedIP}`,
-      );
-
-      res.json({
-        success: true,
-        message: blocked
-          ? `כתובת IP ${normalizedIP} נחסמה בהצלחה`
-          : `חסימת כתובת IP ${normalizedIP} בוטלה בהצלחה`,
-        data: blockedDevice,
-      });
-    } catch (error) {
-      console.error("❌ Error blocking IP:", error);
       res.status(500).json({
         success: false,
         message: error.message,
