@@ -1,9 +1,7 @@
 import User from "../models/User.js";
-import Device from "../models/Device.js";
 import { generateToken } from "../middleware/auth.js";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import { getClientIP } from "../utils/clientIp.js";
 
 import {
   sendWelcomeEmail,
@@ -31,21 +29,6 @@ const checkUserManagement = (actor, target, nextRole) => {
     return "רק מנהל-על יכול לשנות חשבונות מנהלים";
   }
   return null;
-};
-
-// Helper function to extract device info from User-Agent
-const getDeviceInfo = (userAgent) => {
-  if (!userAgent) return "Unknown Device";
-
-  let deviceName = "Unknown";
-  if (userAgent.includes("Windows")) deviceName = "Windows PC";
-  else if (userAgent.includes("Mac")) deviceName = "MacBook";
-  else if (userAgent.includes("iPhone")) deviceName = "iPhone";
-  else if (userAgent.includes("iPad")) deviceName = "iPad";
-  else if (userAgent.includes("Android")) deviceName = "Android Phone";
-  else if (userAgent.includes("Linux")) deviceName = "Linux PC";
-
-  return deviceName;
 };
 
 // @desc    Register new user
@@ -175,44 +158,6 @@ export const login = async (req, res) => {
       await User.updatePassword(user.id, password, { skipFormatCheck: true });
     }
 
-    // Get client IP and device info
-    const clientIP = getClientIP(req);
-    const userAgent = req.headers["user-agent"] || "Unknown";
-    const deviceName = getDeviceInfo(userAgent);
-
-    console.log("🔐 Login from device:");
-    console.log("IP:", clientIP);
-    console.log("Device:", deviceName);
-
-    // Check if device exists or create new one
-    let device = await Device.findByUserAndIP(user.id, clientIP);
-    if (device) {
-      // Update last login for existing device
-      device = await Device.updateLastLogin(user.id, clientIP);
-      console.log("📱 Device login updated:", device?.deviceName);
-    } else {
-      // Check if there's an anonymous tracking record for this IP and claim it
-      const anonDevice = await Device.findAnonymousByIP(clientIP);
-      if (anonDevice) {
-        device = await Device.claimDevice(
-          anonDevice,
-          user.id,
-          deviceName,
-          userAgent,
-        );
-        console.log("🔗 Anonymous device linked to user:", deviceName);
-      } else {
-        // Create new device entry
-        device = await Device.create({
-          userId: user.id,
-          ipAddress: clientIP,
-          deviceName,
-          userAgent,
-        });
-        console.log("✨ New device registered:", deviceName);
-      }
-    }
-
     // Generate token
     const token = generateToken(user.id);
 
@@ -227,13 +172,6 @@ export const login = async (req, res) => {
         email: user.email,
         phone: user.phone,
         role: user.role,
-        deviceInfo: device
-          ? {
-              deviceName: device.deviceName,
-              ipAddress: device.ipAddress,
-              loginCount: device.loginCount,
-            }
-          : null,
       },
     });
   } catch (error) {
