@@ -20,6 +20,67 @@ const checkAdminOrROI = (req, res, next) => {
   next();
 };
 
+// ─── Stats ───────────────────────────────────────────────────────────────────
+
+function calcTrend(current, previous) {
+  if (!previous) return current > 0 ? 100 : 0;
+  return Math.round(((current - previous) / previous) * 100);
+}
+
+function getPeriodRanges(period) {
+  const now = new Date();
+  const ms = {
+    day: 24 * 60 * 60 * 1000,
+    week: 7 * 24 * 60 * 60 * 1000,
+    month: 30 * 24 * 60 * 60 * 1000,
+    year: 365 * 24 * 60 * 60 * 1000,
+  };
+
+  const duration = ms[period] || ms.month;
+  const currentStart = new Date(now.getTime() - duration);
+  const previousStart = new Date(currentStart.getTime() - duration);
+
+  return { now, currentStart, previousStart, duration };
+}
+
+function buildTimeBuckets(period, currentStart, now) {
+  const buckets = [];
+  if (period === "day") {
+    for (let i = 23; i >= 0; i--) {
+      const end = new Date(now.getTime() - i * 60 * 60 * 1000);
+      const start = new Date(end.getTime() - 60 * 60 * 1000);
+      buckets.push({
+        label: end.toLocaleTimeString("he-IL", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        start,
+        end,
+      });
+    }
+    return buckets;
+  }
+
+  const days = period === "week" ? 7 : period === "year" ? 12 : 30;
+  const stepMs =
+    period === "year"
+      ? 30 * 24 * 60 * 60 * 1000
+      : 24 * 60 * 60 * 1000;
+
+  for (let i = days - 1; i >= 0; i--) {
+    const end = new Date(now.getTime() - i * stepMs);
+    const start = new Date(end.getTime() - stepMs);
+    buckets.push({
+      label:
+        period === "year"
+          ? end.toLocaleDateString("he-IL", { month: "short" })
+          : end.toLocaleDateString("he-IL", { day: "numeric", month: "short" }),
+      start,
+      end,
+    });
+  }
+  return buckets;
+}
 // @desc    Get dashboard statistics
 // @route   GET /api/admin/stats?period=day|week|month|year|all
 // @access  Private/Admin/ROI
